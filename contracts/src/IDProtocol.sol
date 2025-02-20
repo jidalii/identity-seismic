@@ -216,7 +216,7 @@ contract IDProtocol{
             _customerData.users.push((ssender));
             _userData.isFirstTime = sbool(true);
         }
-        _userData.totalPurchase += _req.purchaseAmount;
+        _userData.totalPurchase += purchaseAmount;
         _userData.numPurchase += suint256(1);
     }
 
