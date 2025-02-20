@@ -127,13 +127,13 @@ contract IDProtocol {
     }
 
 
-    // function updateScore(uint256[8] calldata _proof, uint256[1] calldata _pubWitness, OffchainIdentity calldata newVals)
-    //     public
-    // {
-    //     verif.verifyProof(_proof, _pubWitness);
-    //     Identity storage _userIdentity = onchainId[saddress(msg.sender)];
-    //     _userIdentity.offchain = newVals;
-    // }
+    function updateScore(uint256[8] calldata _proof, uint256[1] calldata _pubWitness, OffchainIdentity calldata newVals)
+        public
+    {
+        verif.verifyProof(_proof, _pubWitness);
+        Identity storage _userIdentity = onchainId[saddress(msg.sender)];
+        _userIdentity.offchain = newVals;
+    }
 
     // function getIdentity() public view returns (Identity memory) {
     //     return onchainId[saddress(msg.sender)];
