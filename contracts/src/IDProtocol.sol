@@ -132,7 +132,7 @@ contract IDProtocol {
     {
         verif.verifyProof(_proof, _pubWitness);
         Identity storage _userIdentity = onchainId[saddress(msg.sender)];
-        _userIdentity.offchain = newVals;
+        // _userIdentity.offchain = newVals;
     }
 
     // function getIdentity() public view returns (Identity memory) {
