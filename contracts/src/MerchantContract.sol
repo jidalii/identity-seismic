@@ -2,16 +2,16 @@
 pragma solidity ^0.8.13;
 
 import "./IDProtocol.sol";
+import "../lib/openzepplin-contracts/contract/token/ERC20/IERC20.sol";
 
 contract MerchantContract {
-    address owner;
+    address business;
     string name;
-    address IdProtocol;
-
-    constructor(address companyAddr, string companyName) {
-        owner = companyAddr;
-        name = companyName;
-        IdProtocol = msg.sender;
+    address core;
+    constructor(address businessAddr, string businessName) {
+        business = businessAddr;
+        name = businessName;
+        core = msg.sender;
     }
 
     struct Coupon {
@@ -24,22 +24,29 @@ contract MerchantContract {
     }
 
     struct Product {
-        uint price;
+        mapping(address => uint) prices;
         uint stock;
     }
 
+    mapping(address => bool) allowedTokens;
+    address public ETH_ADDRESS = 0x0;
+    allowedToken[ETH_ADDRESS] = true;
     mapping(uint => Product) products;
     mapping(uint => Coupon) coupons;
     uint newProdId;
     uint newCoupId;
 
+    modifier businessOnly() {
+        require(msg.sender == business, "Only the business can call this.");
+        _;
+    }
 
     function purchaseETH(uint[][] txnDetails, uint coupId) external payable {
         uint totalPrice;
         for (uint i =0; i < txnDetails.length; i++){
             uint id = txndetails[i][0];
             uint amt = txndetails[i][1];
-            totalPrice += (products[id].price * amt)
+            totalPrice += (products[id].prices[ETH_ADDRESS] * amt)
         }
 
         require(msg.value == totalPrice);
@@ -49,18 +56,36 @@ contract MerchantContract {
             uint amt = txndetails[i][1];
             adjustStock(id, amt);
         }
-        // todo: call update state function in core contract (totalPrice, 1, false) ... the latter 2 can be hardcorded in the contract itself
+        // todo: call update state function in core contract (totalPrice, transaction amount, first time) ... the latter 2 can be hardcorded in the contract itself
     }
 
-    function purchaseERC20(uint prodId, uint coupId) external payable {
-        // todo: sort out erc20 stuffs
+    function purchaseERC20(uint[][] txnDetails, uint coupId) external payable {
+        uint totalPrice;
+        for (uint i =0; i < txnDetails.length; i++){
+            uint id = txndetails[i][0];
+            uint amt = txndetails[i][1];
+            totalPrice += (products[id].prices[ETH_ADDRESS] * amt)
+        }
+
+        require(IERC20.allowance(msg.sender, address(this)) >= totalPrice, "Insufficient allowance");
+        require(IERC20.balanceOf(msg.sender) == totalPrice, "Insufficient balance");
+
+        bool success = IERC20.transferFrom(msg.sender, address(this), totalPrice);
+        require(success, "Token transfer failed");
+
+        for (uint i =0; i < txnDetails.length; i++){
+            uint id = txndetails[i][0];
+            uint amt = txndetails[i][1];
+            adjustStock(id, amt);
+        }
+        // todo: call update state function in core contract (totalPrice, transaction amount, first time) ... the latter 2 can be hardcorded in the contract itself
     }
 
     function adjustStock(uint prodId, uint amount) internal {
         products[prodId].stock -= amount;
     }
 
-    function createCoupon(uint txnAmt, uint ethAmt, bool firstTime, uint usageNum) public {
+    function createCoupon(uint txnAmt, uint ethAmt, bool firstTime, uint usageNum) public businessOnly() {
         Coupon private newCoupon;
         newCoupon.minTxnAmt = txnAmt;
         newCoupon.minEthAmt = ethAmt;
@@ -71,7 +96,7 @@ contract MerchantContract {
         newCoupId++;
     }
 
-    function createProduct(uint prc, uint stck) public {
+    function createProduct(uint prc, uint stck) public businessOnly() {
         Product private newProduct;
         newProduct.price = prc;
         newProduct.stock = stck;
@@ -79,11 +104,35 @@ contract MerchantContract {
         newProdId++;
     }
 
-    function deactivateCoupon(uint coupId) public {
+    function deactivateCoupon(uint coupId) public businessOnly() {
         coupons[coupId].isActive = false;
     }
 
-    function addStock(uint prodId, uint amt) public {
+    function addStock(uint prodId, uint amt) public businessOnly() {
         products[prodId].stock += amt;
+    }
+
+    function approveToken(address token) public businessOnly() {
+        allowedTokens[token] = true;
+    }
+    function collectRevenue(address token) external payable businessOnly() {
+        require(allowedTokens[token],"Token is not approved.");
+        if (token == ETH_ADDRESS){
+            uint fee = address(this).balance / 100;
+            uint remainder = address(this).balance - fee;
+
+            bool success = business.call{value: remainder}("");
+            require(success, "Transfer failed.");
+            bool success = core.call{value: fee}("");
+            require(success, "Transfer failed.");
+        } else {
+            uint fee = address(this).balanceOf(token) / 100;
+            uint remainder = address(this).balanceOf(token) - fee;
+
+            bool success = IERC20.transferFrom(address(this), business, remainder);
+            require(success, "Token transfer failed");
+            bool success = IERC20.transferFrom(address(this), core, fee);
+            require(success, "Token transfer failed");
+        }
     }
 }
