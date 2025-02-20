@@ -121,7 +121,7 @@ contract IDProtocol is IIDPRotocol, Ownable{
     //*                      IDENTITY-RELATED                      *//
     //*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*//
 
-    function updateScore(uint256[8] calldata _proof, uint256[1] calldata _pubWitness, Identity calldata newVals) public {
+    function updateScore(uint256[8] calldata _proof, uint256[1] calldata _pubWitness, OffchainIdentity calldata newVals) public {
         verif.verifyProof(_proof, _pubWitness);
         onchainId[saddress(msg.sender)] = newVals;
     }
