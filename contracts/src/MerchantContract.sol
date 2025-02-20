@@ -37,7 +37,7 @@ contract MerchantContract {
     }
 
     /// @notice active mappings/global vars
-    mapping(uint256 => Product) products;
+    mapping(uint256 => Product) products; // prodId => Product struct
     mapping(uint256 => Coupon) coupons;
     uint256 newProdId;
     uint256 newCoupId;
@@ -48,13 +48,13 @@ contract MerchantContract {
         _;
     }
 
-/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~transaction functions~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    /// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~transaction functions~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     /// @notice ETH/native token specific transaction function
     function purchaseETH(uint256[] memory txnProds, uint256[] memory txnAmts, uint256 coupId) external payable {
         require(txnProds.length == txnAmts.length, "Incorrect transaction details.");
         uint256 totalPrice;
         for (uint256 i = 0; i < txnProds.length; i++) {
-            totalPrice += (products[txnProds[i]] * txnAmts[i]);
+            totalPrice += (products[txnProds[i]].price * txnAmts[i]);
         }
 
         require(msg.value == totalPrice);
@@ -69,11 +69,14 @@ contract MerchantContract {
     }
 
     /// @notice token transaction function
-    function purchaseERC20(address token, uint256[] memory txnProds, uint256[] memory txnAmts, uint256 coupId) external payable {
+    function purchaseERC20(address token, uint256[] memory txnProds, uint256[] memory txnAmts, uint256 coupId)
+        external
+        payable
+    {
         require(txnProds.length == txnAmts.length, "Incorrect transaction details.");
         uint256 totalPrice;
         for (uint256 i = 0; i < txnProds.length; i++) {
-            totalPrice += (products[txnProds[i]] * txnAmts[i]);
+            totalPrice += (products[txnProds[i]].price * txnAmts[i]);
         }
 
         IERC20(token).transferFrom(msg.sender, address(this), totalPrice);
@@ -92,13 +95,13 @@ contract MerchantContract {
     function adjustStock(uint256 prodId, uint256 amount) internal {
         products[prodId].stock -= amount;
     }
-/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~merchant functions~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    /// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~merchant functions~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     /// @notice function for businesses to create products
+
     function createProduct(uint256 prc, uint256 stck) public businessOnly {
-        Product storage newProduct;
+        Product storage newProduct = products[newProdId];
         newProduct.price = prc;
         newProduct.stock = stck;
-        products[newProdId] = newProduct;
         newProdId++;
     }
 
@@ -109,13 +112,14 @@ contract MerchantContract {
 
     /// @notice function for businesses to create coupons
     function createCoupon(uint256 txnAmt, uint256 ethAmt, bool firstTime, uint256 usageNum) public businessOnly {
-        Coupon storage newCoupon;
+        Coupon storage newCoupon = coupons[newCoupId];
         newCoupon.minTxnAmt = txnAmt;
         newCoupon.minEthAmt = ethAmt;
         newCoupon.firstTimeOnly = firstTime;
         newCoupon.usage = usageNum;
         newCoupon.isActive = true;
-        coupons[newCoupId] = newCoupon;
+
+        // coupons[newCoupId] = newCoupon;
         newCoupId++;
     }
 
@@ -129,23 +133,23 @@ contract MerchantContract {
         allowedTokens[token] = true;
     }
 
-    /// @notice function for business to move revenue to their wallet 
-    function collectRevenue(address token) external payable businessOnly {
+    /// @notice function for business to move revenue to their wallet
+    function collectRevenue(address token, address recipient) external payable businessOnly {
         require(allowedTokens[token], "Token is not approved.");
         if (token == ETH_ADDRESS) {
             uint256 fee = address(this).balance / 100;
             uint256 remainder = address(this).balance - fee;
 
-            bool success = business.call{value: remainder}("");
+            (bool success,) = recipient.call{value: remainder}("");
             require(success, "Transfer failed.");
-            bool feeSuccess = core.call{value: fee}("");
+            (bool feeSuccess,) = core.call{value: fee}("");
             require(feeSuccess, "Fee transfer failed.");
         } else {
-            uint256 fee = address(this).balanceOf(token) / 100;
-            uint256 remainder = address(this).balanceOf(token) - fee;
+            uint256 fee = IERC20(token).balanceOf(address(this)) / 100;
+            uint256 remainder = IERC20(token).balanceOf(address(this)) - fee;
 
-            IERC20.transferFrom(address(this), business, remainder);
-            IERC20.transferFrom(address(this), core, fee);
+            IERC20(token).transferFrom(address(this), recipient, remainder);
+            IERC20(token).transferFrom(address(this), core, fee);
         }
     }
 }
