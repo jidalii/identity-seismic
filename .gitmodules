@@ -35,5 +35,5 @@
 	path = lib/openzeppelin-contracts
 	url = https://github.com/OpenZeppelin/openzeppelin-contracts
 [submodule "new-con/lib/forge-std"]
-	path = new-con/lib/forge-std
+	path = contracts/lib/forge-std
 	url = https://github.com/foundry-rs/forge-std
