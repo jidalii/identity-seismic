@@ -1,25 +1,22 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.8.26;
 
-
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import "./verifier.sol";
 import "./MerchantContract.sol";
 
-
 contract Merchant {
     address public owner;
     string public name;
+
     constructor(address _owner, string memory _name) {
         owner = _owner;
         name = _name;
     }
 }
 
-
-contract IDProtocol{
-
+contract IDProtocol {
     //*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*//
     //*                           USERS                            *//
     //*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*//
@@ -51,12 +48,12 @@ contract IDProtocol{
     struct MerchantData {
         address merchant;
         address owner;
-        string  name;
+        string name;
     }
 
     struct MerchantRegistReq {
         address owner;
-        string  name;
+        string name;
     }
 
     //*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*//
@@ -67,6 +64,7 @@ contract IDProtocol{
         OffchainIdentity offchain;
         OnchainIdentity onchain;
     }
+
     struct OffchainIdentity {
         sbool isGithub;
         suint githubStar;
@@ -77,8 +75,8 @@ contract IDProtocol{
     struct OnchainIdentity {
         suint totalStaked;
         suint txnFrequency;
-        // Identity identity;
     }
+    // Identity identity;
 
     struct QueryReq {
         suint minGithubStar;
@@ -88,10 +86,9 @@ contract IDProtocol{
         suint minTxnFrequency;
     }
 
-
     event MerchantRegistered(address merchant, address owner, string name);
 
-    address constant public ETH_ADDRESS = address(1000);
+    address public constant ETH_ADDRESS = address(1000);
 
     address public owner;
 
@@ -105,7 +102,7 @@ contract IDProtocol{
 
     mapping(address => UserEntry) customerData;
 
-    mapping(saddress => Identity) onchainId; 
+    mapping(saddress => Identity) onchainId;
     saddress[] onchainIdAddresses;
 
     constructor() {
@@ -124,21 +121,18 @@ contract IDProtocol{
     //*                         ADMIN-ONLY                         *//
     //*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*//
 
-    function withdraw(address _token, address _to) external onlyOwner() {
-        if(_token == ETH_ADDRESS) {
+    function withdraw(address _token, address _to) external onlyOwner {
+        if (_token == ETH_ADDRESS) {
             transferETH(_to, address(this).balance);
         } else {
             IERC20(_token).transfer(_to, IERC20(_token).balanceOf(address(this)));
         }
     }
 
-    function transferETH(
-        address _address,
-        uint256 amount
-    ) private returns (bool) {
+    function transferETH(address _address, uint256 amount) private returns (bool) {
         require(_address != address(0), "Zero addresses are not allowed.");
 
-        (bool os, ) = payable(_address).call{value: amount}("");
+        (bool os,) = payable(_address).call{value: amount}("");
 
         return os;
     }
@@ -147,29 +141,31 @@ contract IDProtocol{
     //*                      IDENTITY-RELATED                      *//
     //*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*//
 
-    function updateScore(uint256[8] calldata _proof, uint256[1] calldata _pubWitness, OffchainIdentity calldata newVals) public {
+    function updateScore(uint256[8] calldata _proof, uint256[1] calldata _pubWitness, OffchainIdentity calldata newVals)
+        public
+    {
         verif.verifyProof(_proof, _pubWitness);
         Identity storage _userIdentity = onchainId[saddress(msg.sender)];
         _userIdentity.offchain = newVals;
     }
 
-    function getIdentity() public view returns (Identity memory){
+    function getIdentity() public view returns (Identity memory) {
         return onchainId[saddress(msg.sender)];
     }
 
     function query(QueryReq memory _query) external view returns (address[] memory) {
         // not sure about this
         // do we want ot iterate through and do all this stuff or is this just a one to one form the business POV
-        uint matchedCnt = 0;
-        for(uint i=0; i<uint(onchainIdAddresses.length); i++) {
-            if(isMatched(_query, address(onchainIdAddresses[suint(i)]))) {
+        uint256 matchedCnt = 0;
+        for (uint256 i = 0; i < uint256(onchainIdAddresses.length); i++) {
+            if (isMatched(_query, address(onchainIdAddresses[suint(i)]))) {
                 matchedCnt++;
             }
         }
         address[] memory matchedUsers = new address[](matchedCnt);
 
-        for(uint i=0; i<uint(onchainIdAddresses.length); i++) {
-            if(isMatched(_query, address(onchainIdAddresses[suint(i)]))) {
+        for (uint256 i = 0; i < uint256(onchainIdAddresses.length); i++) {
+            if (isMatched(_query, address(onchainIdAddresses[suint(i)]))) {
                 matchedUsers[i] = address(onchainIdAddresses[suint(i)]);
             }
         }
@@ -179,13 +175,13 @@ contract IDProtocol{
     function isMatched(QueryReq memory _query, address addr) public view returns (bool) {
         if (onchainId[saddress(addr)].offchain.githubStar < _query.minGithubStar) {
             return false;
-        } else if (onchainId[saddress(addr)].offchain.twitterFollower < _query.minTwitterFollower){
+        } else if (onchainId[saddress(addr)].offchain.twitterFollower < _query.minTwitterFollower) {
             return false;
-        } else if (onchainId[saddress(addr)].onchain.totalStaked < _query.minTotalStaked){
+        } else if (onchainId[saddress(addr)].onchain.totalStaked < _query.minTotalStaked) {
             return false;
-        } else if (suint(address(addr).balance) < _query.minBalance){
+        } else if (suint(address(addr).balance) < _query.minBalance) {
             return false;
-        } else if (onchainId[saddress(addr)].onchain.txnFrequency < _query.minTxnFrequency){
+        } else if (onchainId[saddress(addr)].onchain.txnFrequency < _query.minTxnFrequency) {
             return false;
         }
         return true;
@@ -212,14 +208,13 @@ contract IDProtocol{
 
         saddress ssender = saddress(msg.sender);
         UserData storage _userData = _customerData.data[ssender];
-        if(!bool(_userData.isFirstTime)) {
+        if (!bool(_userData.isFirstTime)) {
             _customerData.users.push((ssender));
             _userData.isFirstTime = sbool(true);
         }
         _userData.totalPurchase += purchaseAmount;
         _userData.numPurchase += suint256(1);
     }
-
 
     function _validateRegiester(MerchantRegistReq calldata _req) internal pure {
         require(_req.owner != address(0), "Zero address");
