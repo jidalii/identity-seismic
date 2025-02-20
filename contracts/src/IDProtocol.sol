@@ -3,13 +3,22 @@ pragma solidity ^0.8.26;
 
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
 
 import "./verifier.sol";
 import "./MerchantContract.sol";
 
 
-interface IIDPRotocol {
+contract Merchant {
+    address public owner;
+    string public name;
+    constructor(address _owner, string memory _name) {
+        owner = _owner;
+        name = _name;
+    }
+}
+
+
+contract IDProtocol{
 
     //*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*//
     //*                           USERS                            *//
@@ -81,11 +90,10 @@ interface IIDPRotocol {
 
 
     event MerchantRegistered(address merchant, address owner, string name);
-}
 
-contract IDProtocol is IIDPRotocol, Ownable{
+    address constant public ETH_ADDRESS = address(1000);
 
-    address constant public ETH_ADDRESS = address(0);
+    address public owner;
 
     Verifier public verif;
 
@@ -100,7 +108,14 @@ contract IDProtocol is IIDPRotocol, Ownable{
     mapping(saddress => Identity) onchainId; 
     saddress[] onchainIdAddresses;
 
-    constructor() Ownable(msg.sender){
+    constructor() {
+        owner = msg.sender;
+        verif = new Verifier();
+    }
+
+    modifier onlyOwner() {
+        require(msg.sender == owner, "Only the owner can call this.");
+        _;
     }
 
     receive() external payable {}
@@ -109,12 +124,23 @@ contract IDProtocol is IIDPRotocol, Ownable{
     //*                         ADMIN-ONLY                         *//
     //*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*//
 
-    function withdraw(address _token) external onlyOwner() {
+    function withdraw(address _token, address _to) external onlyOwner() {
         if(_token == ETH_ADDRESS) {
-            payable(msg.sender).transfer(address(this).balance);
+            transferETH(_to, address(this).balance);
         } else {
-            IERC20(_token).transfer(owner, IERC20(_token).balanceOf(address(this)));
+            IERC20(_token).transfer(_to, IERC20(_token).balanceOf(address(this)));
         }
+    }
+
+    function transferETH(
+        address _address,
+        uint256 amount
+    ) private returns (bool) {
+        require(_address != address(0), "Zero addresses are not allowed.");
+
+        (bool os, ) = payable(_address).call{value: amount}("");
+
+        return os;
     }
 
     //*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*//
@@ -123,7 +149,8 @@ contract IDProtocol is IIDPRotocol, Ownable{
 
     function updateScore(uint256[8] calldata _proof, uint256[1] calldata _pubWitness, OffchainIdentity calldata newVals) public {
         verif.verifyProof(_proof, _pubWitness);
-        onchainId[saddress(msg.sender)] = newVals;
+        Identity storage _userIdentity = onchainId[saddress(msg.sender)];
+        _userIdentity.offchain = newVals;
     }
 
     function getIdentity() public view returns (Identity memory){
@@ -150,15 +177,15 @@ contract IDProtocol is IIDPRotocol, Ownable{
     }
 
     function isMatched(QueryReq memory _query, address addr) public view returns (bool) {
-        if (onchainId[saddress(addr)].onchain.githubStar < _query.minGithubStar) {
+        if (onchainId[saddress(addr)].offchain.githubStar < _query.minGithubStar) {
             return false;
-        } else if (onchainId[saddress(addr)].onchain.twitterFollower < _query.minTwitterFollower){
+        } else if (onchainId[saddress(addr)].offchain.twitterFollower < _query.minTwitterFollower){
             return false;
-        } else if (onchainId[saddress(addr)].offchain.totalStaked < _query.minTotalStaked){
+        } else if (onchainId[saddress(addr)].onchain.totalStaked < _query.minTotalStaked){
             return false;
-        } else if (address(addr).balance < _query.minBalance){
+        } else if (suint(address(addr).balance) < _query.minBalance){
             return false;
-        } else if (onchainId[saddress(addr)].offchain.txnFrequency < _query.minTxnFrequency){
+        } else if (onchainId[saddress(addr)].onchain.txnFrequency < _query.minTxnFrequency){
             return false;
         }
         return true;
@@ -184,16 +211,17 @@ contract IDProtocol is IIDPRotocol, Ownable{
         UserEntry storage _customerData = customerData[_merchant];
 
         saddress ssender = saddress(msg.sender);
-        if(!_customerData.data[ssender].isFirstTime) {
+        UserData storage _userData = _customerData.data[ssender];
+        if(!bool(_userData.isFirstTime)) {
             _customerData.users.push((ssender));
-            _customerData.data[ssender].isFirstTime = sbool(true);
+            _userData.isFirstTime = sbool(true);
         }
-        _customerData.data[ssender].totalPurchase += _req.purchaseAmount;
-        _customerData.data[ssender].numPurchase += suint256(1);
+        _userData.totalPurchase += _req.purchaseAmount;
+        _userData.numPurchase += suint256(1);
     }
 
 
-    function _validateRegiester(MerchantRegistReq calldata _req) internal {
+    function _validateRegiester(MerchantRegistReq calldata _req) internal pure {
         require(_req.owner != address(0), "Zero address");
         require(bytes(_req.name).length > 0, "Empty name");
     }
