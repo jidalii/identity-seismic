@@ -1,66 +1,30 @@
-## Foundry
+# IDProtocol
 
-**Foundry is a blazing fast, portable and modular toolkit for Ethereum application development written in Rust.**
+## Tech Stack
 
-Foundry consists of:
+- Language: Solidity
+- Testing and Deployment framework: Foundry
 
--   **Forge**: Ethereum testing framework (like Truffle, Hardhat and DappTools).
--   **Cast**: Swiss army knife for interacting with EVM smart contracts, sending transactions and getting chain data.
--   **Anvil**: Local Ethereum node, akin to Ganache, Hardhat Network.
--   **Chisel**: Fast, utilitarian, and verbose solidity REPL.
+## Setup
 
-## Documentation
+0. Ensure that you have Rust and Foundry installed in your machine.
+   - Rust installation instructions: [Rust install](https://www.rust-lang.org/tools/install).
+   - Foundry installation instructions: [Foundry install](https://book.getfoundry.sh/getting-started/installation).
 
-https://book.getfoundry.sh/
+1. Install dependencies:
 
-## Usage
+   ```shell
+   # Install Foundry testing framework standard library
+   forge install foundry-rs/forge-std --no-commit  
 
-### Build
+   # Install Uniswap V3 core and periphery contracts
+   forge install uniswap/v3-core uniswap/v3-periphery --no-commit
 
-```shell
-$ forge build
-```
+   # Install Uniswap V2 core and periphery contracts
+   forge install uniswap/v2-core uniswap/v2-periphery --no-commit
 
-### Test
+   # Install OpenZeppelin core contracts
+   forge install OpenZeppelin/openzeppelin-contracts  --no-commit  
 
-```shell
-$ forge test
-```
+   ```
 
-### Format
-
-```shell
-$ forge fmt
-```
-
-### Gas Snapshots
-
-```shell
-$ forge snapshot
-```
-
-### Anvil
-
-```shell
-$ anvil
-```
-
-### Deploy
-
-```shell
-$ forge script script/Counter.s.sol:CounterScript --rpc-url <your_rpc_url> --private-key <your_private_key>
-```
-
-### Cast
-
-```shell
-$ cast <subcommand>
-```
-
-### Help
-
-```shell
-$ forge --help
-$ anvil --help
-$ cast --help
-```
