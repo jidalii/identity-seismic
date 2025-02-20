@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0
-pragma solidity ^0.8.26;
+pragma solidity ^0.8.13;
 
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "./IERC20.sol";
 
-import "./verifier.sol";
+import "./Verifier.sol";
 import "./MerchantContract.sol";
 
 contract Merchant {
@@ -87,8 +87,9 @@ contract IDProtocol {
     }
 
     event MerchantRegistered(address merchant, address owner, string name);
+    event VaultWithdrawn(address token, address to, uint256 amount);
 
-    address public constant ETH_ADDRESS = address(1000);
+    address public constant ETH_ADDRESS = address(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE);
 
     address public owner;
 
@@ -123,10 +124,11 @@ contract IDProtocol {
 
     function withdraw(address _token, address _to) external onlyOwner {
         if (_token == ETH_ADDRESS) {
-            transferETH(_to, address(this).balance);
+            require(transferETH(_to, address(this).balance), "failed to withdraw ETH");
         } else {
             IERC20(_token).transfer(_to, IERC20(_token).balanceOf(address(this)));
         }
+        emit VaultWithdrawn(_token, _to, address(this).balance);
     }
 
     function transferETH(address _address, uint256 amount) private returns (bool) {
@@ -145,7 +147,7 @@ contract IDProtocol {
         public
     {
         verif.verifyProof(_proof, _pubWitness);
-        Identity storage _userIdentity = onchainId[saddress(msg.sender)];
+        Identity memory _userIdentity = onchainId[saddress(msg.sender)];
         _userIdentity.offchain = newVals;
     }
 
@@ -206,10 +208,9 @@ contract IDProtocol {
 
         UserEntry storage _customerData = customerData[_merchant];
 
-        saddress ssender = saddress(msg.sender);
-        UserData storage _userData = _customerData.data[ssender];
+        UserData storage _userData = _customerData.data[user];
         if (!bool(_userData.isFirstTime)) {
-            _customerData.users.push((ssender));
+            _customerData.users.push(saddress(user));
             _userData.isFirstTime = sbool(true);
         }
         _userData.totalPurchase += purchaseAmount;
