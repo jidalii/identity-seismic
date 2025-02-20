@@ -3,7 +3,7 @@ pragma solidity ^0.8.13;
 
 import "./IERC20.sol";
 
-// import "./Verifier.sol";
+import "./Verifier.sol";
 import "./MerchantContract.sol";
 
 contract Merchant {
@@ -87,12 +87,13 @@ contract IDProtocol {
     }
 
     event MerchantRegistered(address merchant, address owner, string name);
+    event VaultWithdrawn(address token, address to, uint256 amount);
 
-    address public constant ETH_ADDRESS = address(1000);
+    address public constant ETH_ADDRESS = address(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE);
 
     address public owner;
 
-    // Verifier public verif;
+    Verifier public verif;
 
     saddress[] private users;
     mapping(saddress => bool) private isUser;
@@ -107,7 +108,7 @@ contract IDProtocol {
 
     constructor() {
         owner = msg.sender;
-        // verif = new Verifier();
+        verif = new Verifier();
     }
 
     modifier onlyOwner() {
@@ -123,10 +124,11 @@ contract IDProtocol {
 
     function withdraw(address _token, address _to) external onlyOwner {
         if (_token == ETH_ADDRESS) {
-            transferETH(_to, address(this).balance);
+            require(transferETH(_to, address(this).balance), "failed to withdraw ETH");
         } else {
             IERC20(_token).transfer(_to, IERC20(_token).balanceOf(address(this)));
         }
+        emit VaultWithdrawn(_token, _to, address(this).balance);
     }
 
     function transferETH(address _address, uint256 amount) private returns (bool) {
@@ -141,13 +143,13 @@ contract IDProtocol {
     //*                      IDENTITY-RELATED                      *//
     //*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*//
 
-    // function updateScore(uint256[8] calldata _proof, uint256[1] calldata _pubWitness, OffchainIdentity calldata newVals)
-    //     public
-    // {
-    //     // verif.verifyProof(_proof, _pubWitness);
-    //     Identity storage _userIdentity = onchainId[saddress(msg.sender)];
-    //     _userIdentity.offchain = newVals;
-    // }
+    function updateScore(uint256[8] calldata _proof, uint256[1] calldata _pubWitness, OffchainIdentity calldata newVals)
+        public
+    {
+        verif.verifyProof(_proof, _pubWitness);
+        Identity memory _userIdentity = onchainId[saddress(msg.sender)];
+        _userIdentity.offchain = newVals;
+    }
 
     function getIdentity() public view returns (Identity memory) {
         return onchainId[saddress(msg.sender)];
