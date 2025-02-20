@@ -205,7 +205,7 @@ contract IDProtocol{
         emit MerchantRegistered(address(newMerchant), _req.owner, _req.name);
     }
 
-    function updateUserEntry(address _merchant, CustomerDataUpdateReq calldata _req) external {
+    function updateUserEntry(address _merchant, saddress user, suint256 purchaseAmount) external {
         require(msg.sender == _merchant, "Only the merchant can update their own data");
 
         UserEntry storage _customerData = customerData[_merchant];
