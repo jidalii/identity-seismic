@@ -5,10 +5,12 @@ import "forge-std/Test.sol";
 import "forge-std/console.sol";
 
 import {CheatCodes} from "./ICheatCodes.sol";
-import {IDProtocol, IIDProtocol} from "src/IDProtocol.sol";
+import {IDProtocol} from "src/IDProtocol.sol";
+import "src/Verifier.sol";
 
 contract IDProtocolTest is Test {
     IDProtocol idProtocol;
+    Verifier verifier;
 
     CheatCodes cheats = CheatCodes(VM_ADDRESS);
 
@@ -17,17 +19,18 @@ contract IDProtocolTest is Test {
     function setUp() public {
         vm.prank(admin);
         idProtocol = new IDProtocol();
+        verifier = new Verifier();
     }
 
-    function test_buyToLaunchAmount() public {
-        IIDProtocol.OffchainIdentity  memory offchain = IIDProtocol.OffchainIdentity({
+    function test_buyToLaunchAmount() public view {
+        IDProtocol.OffchainIdentity  memory offchain = IDProtocol.OffchainIdentity({
             isGithub: sbool(true),
             githubStar: suint256(100),
             isTwitter: sbool(true),
             twitterFollower: suint256(100)
         });
 
-        uint256[8] _proof = [
+        uint256[8] memory _proof = [
             7174833846330387795879905970947600072230443019161272173875958569396769374141, 
             17691209926964014382418187475873999120248666472476633055905313619609239265514, 
             2559568753358264708172447282783315516644148514162326396943670442346286653709, 
@@ -38,9 +41,9 @@ contract IDProtocolTest is Test {
             17309473987180656666037763738069565977840130241893522131028592155241405988434
         ];
 
-        uint256[1] _input = [uint256(100)];
+        uint256[1] memory _input = [uint256(100)];
 
-
+        verifier.verifyProof(_proof, _input);
 
     }
 
