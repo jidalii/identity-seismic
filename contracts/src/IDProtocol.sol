@@ -5,7 +5,7 @@ pragma solidity ^0.8.26;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
-import "../../zkp/verifier/verifier.sol";
+import "./verifier.sol";
 import "./MerchantContract.sol";
 
 
