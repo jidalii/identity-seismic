@@ -15,16 +15,16 @@
 
    ```shell
    # Install Foundry testing framework standard library
-   forge install foundry-rs/forge-std --no-commit  
+   sforge install foundry-rs/forge-std --no-commit  
 
    # Install Uniswap V3 core and periphery contracts
-   forge install uniswap/v3-core uniswap/v3-periphery --no-commit
+   sforge install uniswap/v3-core uniswap/v3-periphery --no-commit
 
    # Install Uniswap V2 core and periphery contracts
-   forge install uniswap/v2-core uniswap/v2-periphery --no-commit
+   sforge install uniswap/v2-core uniswap/v2-periphery --no-commit
 
    # Install OpenZeppelin core contracts
-   forge install OpenZeppelin/openzeppelin-contracts  --no-commit  
+   sforge install OpenZeppelin/openzeppelin-contracts  --no-commit  
 
    ```
 
