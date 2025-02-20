@@ -1,19 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.8.26;
 
+
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+
 import "../../zkp/verifier/verifier.sol";
 import "./MerchantContract.sol";
 
-// contract Merchant {
-//     address public owner;
-//     string public name;
-//     address public core;
-//     constructor(address companyAddress, string memory companyName, address coreAddress) {
-//         owner = companyAddress;
-//         name = companyName;
-//         core = coreAddress;
-//     }
-// }
 
 interface IIDPRotocol {
 
@@ -89,8 +83,9 @@ interface IIDPRotocol {
     event MerchantRegistered(address merchant, address owner, string name);
 }
 
-contract IDProtocol is IIDPRotocol{
-    address owner;
+contract IDProtocol is IIDPRotocol, Ownable{
+
+    address constant public ETH_ADDRESS = address(0);
 
     Verifier public verif;
 
@@ -105,9 +100,26 @@ contract IDProtocol is IIDPRotocol{
     mapping(saddress => Identity) onchainId; 
     saddress[] onchainIdAddresses;
 
-    constructor() {
-        owner = msg.sender;
+    constructor() Ownable(msg.sender){
     }
+
+    receive() external payable {}
+
+    //*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*//
+    //*                         ADMIN-ONLY                         *//
+    //*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*//
+
+    function withdraw(address _token) external onlyOwner() {
+        if(_token == ETH_ADDRESS) {
+            payable(msg.sender).transfer(address(this).balance);
+        } else {
+            IERC20(_token).transfer(owner, IERC20(_token).balanceOf(address(this)));
+        }
+    }
+
+    //*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*//
+    //*                      IDENTITY-RELATED                      *//
+    //*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*//
 
     function updateScore(uint256[8] calldata _proof, uint256[1] calldata _pubWitness, Identity calldata newVals) public {
         verif.verifyProof(_proof, _pubWitness);
@@ -125,7 +137,6 @@ contract IDProtocol is IIDPRotocol{
         for(uint i=0; i<uint(onchainIdAddresses.length); i++) {
             if(isMatched(_query, address(onchainIdAddresses[suint(i)]))) {
                 matchedCnt++;
-                matchedUsers.push(address(onchainIdAddresses[suint(i)]));
             }
         }
         address[] memory matchedUsers = new address[](matchedCnt);
@@ -135,8 +146,7 @@ contract IDProtocol is IIDPRotocol{
                 matchedUsers[i] = address(onchainIdAddresses[suint(i)]);
             }
         }
-
-
+        return matchedUsers;
     }
 
     function isMatched(QueryReq memory _query, address addr) public view returns (bool) {
@@ -154,6 +164,20 @@ contract IDProtocol is IIDPRotocol{
         return true;
     }
 
+    //*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*//
+    //*                      MERCHANT-RELATED                      *//
+    //*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*//
+
+    function register(MerchantRegistReq calldata _req) external {
+        _validateRegiester(_req);
+
+        Merchant newMerchant = new Merchant(_req.owner, _req.name);
+        merchants.push(address(newMerchant));
+        merchantData[address(newMerchant)] = MerchantData(address(newMerchant), _req.owner, _req.name);
+
+        emit MerchantRegistered(address(newMerchant), _req.owner, _req.name);
+    }
+
     function updateUserEntry(address _merchant, CustomerDataUpdateReq calldata _req) external {
         require(msg.sender == _merchant, "Only the merchant can update their own data");
 
@@ -168,15 +192,6 @@ contract IDProtocol is IIDPRotocol{
         _customerData.data[ssender].numPurchase += suint256(1);
     }
 
-    function register(MerchantRegistReq calldata _req) external {
-        _validateRegiester(_req);
-
-        Merchant newMerchant = new Merchant(_req.owner, _req.name);
-        merchants.push(address(newMerchant));
-        merchantData[address(newMerchant)] = MerchantData(address(newMerchant), _req.owner, _req.name);
-
-        emit MerchantRegistered(address(newMerchant), _req.owner, _req.name);
-    }
 
     function _validateRegiester(MerchantRegistReq calldata _req) internal {
         require(_req.owner != address(0), "Zero address");
@@ -186,6 +201,4 @@ contract IDProtocol is IIDPRotocol{
     // need to compute overall score? dunno
     // need to add extra onchain proof mechanisms
     // main functionality is to prove yo uare a human, not a bot and for a buiness to search for a targeted defografic
-
-
 }
