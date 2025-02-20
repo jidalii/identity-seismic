@@ -190,14 +190,14 @@ contract IDProtocol {
 
         UserEntry storage _customerData = customerData[_merchant];
 
-    //     saddress ssender = saddress(msg.sender);
-    //     UserData storage _userData = _customerData.data[ssender];
-    //     if (!bool(_userData.isFirstTime)) {
-    //         _customerData.users.push((ssender));
-    //         _userData.isFirstTime = sbool(true);
-    //     }
-    //     _userData.totalPurchase += purchaseAmount;
-    //     _userData.numPurchase += suint256(1);
+        saddress ssender = saddress(msg.sender);
+        UserData storage _userData = _customerData.data[ssender];
+        if (!bool(_userData.isFirstTime)) {
+            _customerData.users.push((ssender));
+            _userData.isFirstTime = sbool(true);
+        }
+        _userData.totalPurchase += purchaseAmount;
+        _userData.numPurchase += suint256(1);
     }
 
     function _validateRegiester(MerchantRegistReq calldata _req) internal pure {
