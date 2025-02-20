@@ -3,6 +3,7 @@ pragma solidity ^0.8.13;
 
 import "./IDProtocol.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "./MockOracle.sol";
 
 contract MerchantContract {
     /// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~merchant data~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
