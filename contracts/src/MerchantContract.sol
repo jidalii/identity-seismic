@@ -8,12 +8,13 @@ contract MerchantContract {
     address business;
     string name;
     address core;
-    address public ETH_ADDRESS;
+    address public ETH_ADDRESS = 0x0;
+    mapping(address => bool) allowedTokens;
     constructor(address businessAddr, string businessName) {
         business = businessAddr;
         name = businessName;
         core = msg.sender;
-        ETH_ADDRESS = 0x0;
+        allowedToken[ETH_ADDRESS] = true;
     }
 
     struct Coupon {
@@ -30,8 +31,6 @@ contract MerchantContract {
         uint stock;
     }
 
-    mapping(address => bool) allowedTokens;
-    allowedToken[ETH_ADDRESS] = true;
     mapping(uint => Product) products;
     mapping(uint => Coupon) coupons;
     uint newProdId;
