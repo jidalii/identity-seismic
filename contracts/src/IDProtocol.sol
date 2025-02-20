@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.8.13;
 
+import "../../zkp/verifier/verifier.sol";
 
-contract IDProtocal {
+contract IDProtocol {
     address owner;
+    Verifier public verif;
     constructor() {
         owner = msg.sender;
     }
@@ -20,7 +22,6 @@ contract IDProtocal {
     }
 
     struct UpdateScoreReq {
-        saddress owner;
         sbool isGithub;
         suint githubStar;
         sbool isTwitter;
@@ -40,18 +41,20 @@ contract IDProtocal {
     }
     
     mapping(saddress => Identity) onchainId; 
-    address[] onchainIdAddress;
+    address[] onchainIdAddresses;
 
-    function updateScore(uint proof, Identity memory newVals) public {
+    function updateScore(uint proof, Identity calldata newVals) public {
+        verif.verifyProof(proof, newVals);
         onchainId[saddress(msg.sender)] = newVals;
     }
 
-    function getScore(saddress idAddr) public view returns (Identity memory){
-        return onchainId[idAddr];
+    function getScore() public view returns (Identity storage){
+        return onchainId[saddress(msg.sender)];
     }
 
     function query(QueryReq memory query) public view returns (address[] memory) {
         // not sure about this
+        // do we want ot iterate through and do all this stuff or is this just a one to one form the business POV
     }
 
     function isMatched(QueryReq memory query, address addr) public view returns (bool) {
@@ -68,4 +71,8 @@ contract IDProtocal {
         }
         return true;
     }
+
+    // need to compute overall score? dunno
+    // need to add extra onchain proof mechanisms
+    // main functionality is to prove yo uare a human, not a bot and for a buiness to search for a targeted defografic
 }
