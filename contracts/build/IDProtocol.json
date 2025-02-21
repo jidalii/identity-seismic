@@ -1,0 +1,528 @@
+[
+    {
+        "inputs": [],
+        "stateMutability": "nonpayable",
+        "type": "constructor"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": false,
+                "internalType": "address",
+                "name": "merchant",
+                "type": "address"
+            },
+            {
+                "indexed": false,
+                "internalType": "address",
+                "name": "owner",
+                "type": "address"
+            },
+            {
+                "indexed": false,
+                "internalType": "string",
+                "name": "name",
+                "type": "string"
+            }
+        ],
+        "name": "MerchantRegistered",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": false,
+                "internalType": "address",
+                "name": "owner",
+                "type": "address"
+            },
+            {
+                "indexed": false,
+                "internalType": "address",
+                "name": "verif",
+                "type": "address"
+            },
+            {
+                "indexed": false,
+                "internalType": "address",
+                "name": "oracle",
+                "type": "address"
+            }
+        ],
+        "name": "ProtocolDeployed",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": false,
+                "internalType": "address",
+                "name": "token",
+                "type": "address"
+            },
+            {
+                "indexed": false,
+                "internalType": "address",
+                "name": "to",
+                "type": "address"
+            },
+            {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "amount",
+                "type": "uint256"
+            }
+        ],
+        "name": "VaultWithdrawn",
+        "type": "event"
+    },
+    {
+        "inputs": [],
+        "name": "ETH_ADDRESS",
+        "outputs": [
+            {
+                "internalType": "address",
+                "name": "",
+                "type": "address"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "address",
+                "name": "user",
+                "type": "address"
+            },
+            {
+                "internalType": "uint256",
+                "name": "_minTxnAmt",
+                "type": "uint256"
+            },
+            {
+                "internalType": "uint256",
+                "name": "_minEThAmt",
+                "type": "uint256"
+            },
+            {
+                "internalType": "bool",
+                "name": "_firstTimeOnly",
+                "type": "bool"
+            }
+        ],
+        "name": "checkValidCouponApply",
+        "outputs": [
+            {
+                "internalType": "bool",
+                "name": "",
+                "type": "bool"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "getIdentity",
+        "outputs": [
+            {
+                "components": [
+                    {
+                        "components": [
+                            {
+                                "internalType": "sbool",
+                                "name": "isGithub",
+                                "type": "sbool"
+                            },
+                            {
+                                "internalType": "suint256",
+                                "name": "githubStar",
+                                "type": "suint256"
+                            },
+                            {
+                                "internalType": "sbool",
+                                "name": "isTwitter",
+                                "type": "sbool"
+                            },
+                            {
+                                "internalType": "suint256",
+                                "name": "twitterFollower",
+                                "type": "suint256"
+                            }
+                        ],
+                        "internalType": "struct IDProtocol.OffchainIdentity",
+                        "name": "offchain",
+                        "type": "tuple"
+                    },
+                    {
+                        "components": [
+                            {
+                                "internalType": "suint256",
+                                "name": "totalStaked",
+                                "type": "suint256"
+                            },
+                            {
+                                "internalType": "suint256",
+                                "name": "txnFrequency",
+                                "type": "suint256"
+                            }
+                        ],
+                        "internalType": "struct IDProtocol.OnchainIdentity",
+                        "name": "onchain",
+                        "type": "tuple"
+                    }
+                ],
+                "internalType": "struct IDProtocol.Identity",
+                "name": "",
+                "type": "tuple"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "address",
+                "name": "_merchant",
+                "type": "address"
+            },
+            {
+                "internalType": "saddress",
+                "name": "user",
+                "type": "saddress"
+            }
+        ],
+        "name": "getUserEntry",
+        "outputs": [
+            {
+                "components": [
+                    {
+                        "internalType": "uint256",
+                        "name": "totalPurchase",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "numPurchase",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "bool",
+                        "name": "isFirstTime",
+                        "type": "bool"
+                    }
+                ],
+                "internalType": "struct IDProtocol.UserDataPub",
+                "name": "",
+                "type": "tuple"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "components": [
+                    {
+                        "internalType": "suint256",
+                        "name": "minGithubStar",
+                        "type": "suint256"
+                    },
+                    {
+                        "internalType": "suint256",
+                        "name": "minTwitterFollower",
+                        "type": "suint256"
+                    },
+                    {
+                        "internalType": "suint256",
+                        "name": "minTotalStaked",
+                        "type": "suint256"
+                    },
+                    {
+                        "internalType": "suint256",
+                        "name": "minBalance",
+                        "type": "suint256"
+                    },
+                    {
+                        "internalType": "suint256",
+                        "name": "minTxnFrequency",
+                        "type": "suint256"
+                    }
+                ],
+                "internalType": "struct IDProtocol.QueryReq",
+                "name": "_query",
+                "type": "tuple"
+            },
+            {
+                "internalType": "address",
+                "name": "addr",
+                "type": "address"
+            }
+        ],
+        "name": "isMatched",
+        "outputs": [
+            {
+                "internalType": "bool",
+                "name": "",
+                "type": "bool"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "address",
+                "name": "",
+                "type": "address"
+            }
+        ],
+        "name": "merchantData",
+        "outputs": [
+            {
+                "internalType": "address",
+                "name": "merchant",
+                "type": "address"
+            },
+            {
+                "internalType": "address",
+                "name": "owner",
+                "type": "address"
+            },
+            {
+                "internalType": "string",
+                "name": "name",
+                "type": "string"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            }
+        ],
+        "name": "merchants",
+        "outputs": [
+            {
+                "internalType": "address",
+                "name": "",
+                "type": "address"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "oracle",
+        "outputs": [
+            {
+                "internalType": "contract MockOracle",
+                "name": "",
+                "type": "address"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "owner",
+        "outputs": [
+            {
+                "internalType": "address",
+                "name": "",
+                "type": "address"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "components": [
+                    {
+                        "internalType": "suint256",
+                        "name": "minGithubStar",
+                        "type": "suint256"
+                    },
+                    {
+                        "internalType": "suint256",
+                        "name": "minTwitterFollower",
+                        "type": "suint256"
+                    },
+                    {
+                        "internalType": "suint256",
+                        "name": "minTotalStaked",
+                        "type": "suint256"
+                    },
+                    {
+                        "internalType": "suint256",
+                        "name": "minBalance",
+                        "type": "suint256"
+                    },
+                    {
+                        "internalType": "suint256",
+                        "name": "minTxnFrequency",
+                        "type": "suint256"
+                    }
+                ],
+                "internalType": "struct IDProtocol.QueryReq",
+                "name": "_query",
+                "type": "tuple"
+            }
+        ],
+        "name": "query",
+        "outputs": [
+            {
+                "internalType": "address[]",
+                "name": "",
+                "type": "address[]"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "components": [
+                    {
+                        "internalType": "address",
+                        "name": "owner",
+                        "type": "address"
+                    },
+                    {
+                        "internalType": "string",
+                        "name": "name",
+                        "type": "string"
+                    }
+                ],
+                "internalType": "struct IDProtocol.MerchantRegistReq",
+                "name": "_req",
+                "type": "tuple"
+            }
+        ],
+        "name": "register",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "uint256[8]",
+                "name": "_proof",
+                "type": "uint256[8]"
+            },
+            {
+                "internalType": "uint256[1]",
+                "name": "_pubWitness",
+                "type": "uint256[1]"
+            },
+            {
+                "components": [
+                    {
+                        "internalType": "sbool",
+                        "name": "isGithub",
+                        "type": "sbool"
+                    },
+                    {
+                        "internalType": "suint256",
+                        "name": "githubStar",
+                        "type": "suint256"
+                    },
+                    {
+                        "internalType": "sbool",
+                        "name": "isTwitter",
+                        "type": "sbool"
+                    },
+                    {
+                        "internalType": "suint256",
+                        "name": "twitterFollower",
+                        "type": "suint256"
+                    }
+                ],
+                "internalType": "struct IDProtocol.OffchainIdentity",
+                "name": "newVals",
+                "type": "tuple"
+            }
+        ],
+        "name": "updateScore",
+        "outputs": [],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "address",
+                "name": "_merchant",
+                "type": "address"
+            },
+            {
+                "internalType": "saddress",
+                "name": "user",
+                "type": "saddress"
+            },
+            {
+                "internalType": "suint256",
+                "name": "purchaseAmount",
+                "type": "suint256"
+            }
+        ],
+        "name": "updateUserEntry",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "verif",
+        "outputs": [
+            {
+                "internalType": "contract Verifier",
+                "name": "",
+                "type": "address"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "address",
+                "name": "_token",
+                "type": "address"
+            },
+            {
+                "internalType": "address",
+                "name": "_to",
+                "type": "address"
+            }
+        ],
+        "name": "withdraw",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "stateMutability": "payable",
+        "type": "receive"
+    }
+]
