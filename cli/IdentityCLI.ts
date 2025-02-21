@@ -1,9 +1,9 @@
-import { createShieldedPublicClient, createShieldedWalletClient, http } from 'seismic-viem';
+import { createShieldedPublicClient, createShieldedWalletClient, shieldedWriteContract, seismicDevnet, sanvil } from 'seismic-viem';
 import { privateKeyToAccount } from 'viem/accounts';
-import { abi as IDProtocolABI } from '../contracts/build/IDProtocol.json';
-import { abi as MerchantContractABI } from '../contracts/build/MerchantContract.json';
-import { abi as MockOracleABI } from '../contracts/build/MockOracle.json';
-import { abi as VerifierABI } from '../contracts/build/Verifier.json';
+import IDProtocolABI from '../contracts/build/IDProtocol.json';
+import MerchantContractABI from '../contracts/build/MerchantContract.json';
+import MockOracleABI from '../contracts/build/MockOracle.json';
+import VerifierABI from '../contracts/build/Verifier.json';
 import { Command } from 'commander';
 import dotenv from 'dotenv';
 
@@ -12,18 +12,19 @@ const program = new Command();
 
 // Initialize Ethereum clients
 const publicClient = createShieldedPublicClient({
-  transport: http(process.env.RPC_URL),
+  process.env.CHAIN_ID === sanvil.id.toString() ? sanvil : seismicDevnet
 });
 
 const walletClient = createShieldedWalletClient({
-  transport: http(process.env.RPC_URL),
-  account: privateKeyToAccount(process.env.PRIVATE_KEY!),
+  account: privateKeyToAccount(process.env.PRIVATE_KEY! as `0x${string}`),
+  process.env.CHAIN_ID === sanvil.id.toString() ? sanvil : seismicDevnet
 });
 
-const IDProtocolAddress = process.env.ID_PROTOCOL_ADDRESS;
-const MerchantContractAddress = process.env.MERCHANT_CONTRACT_ADDRESS;
-const MockOracleAddress = process.env.MOCK_ORACLE_ADDRESS;
-const VerifierAddress = process.env.VERIFIER_ADDRESS;
+
+const IDProtocolAddress = process.env.ID_PROTOCOL_ADDRESS as `0x${string}`;
+const MerchantContractAddress = process.env.MERCHANT_CONTRACT_ADDRESS as `0x${string}`;
+const MockOracleAddress = process.env.MOCK_ORACLE_ADDRESS as `0x${string}`;
+const VerifierAddress = process.env.VERIFIER_ADDRESS as `0x${string}`;
 
 // Utility function for error handling
 async function safeExecute(fn: Function, ...args: any[]) {
@@ -45,7 +46,7 @@ async function getMerchantName() {
 }
 
 async function registerMerchant(name: string) {
-  return await walletClient.writeContract({
+  return await walletClient.shieldedWriteContract({
     address: IDProtocolAddress!,
     abi: IDProtocolABI,
     functionName: "registerMerchant",
