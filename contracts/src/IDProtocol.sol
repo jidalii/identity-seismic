@@ -231,13 +231,17 @@ contract IDProtocol {
 
     function getUserEntry(address _merchant, saddress user) external view returns (UserDataPub memory) {
         UserData memory _data = customerData[_merchant].data[user];
-        return UserDataPub(uint(_data.totalPurchase), uint(_data.numPurchase), bool(_data.isFirstTime));
+        return UserDataPub(uint256(_data.totalPurchase), uint256(_data.numPurchase), bool(_data.isFirstTime));
     }
 
-    function checkValidCouponApply(address user, uint256 _minTxnAmt, uint256 _minEThAmt, bool _firstTimeOnly) external view returns (bool) {
+    function checkValidCouponApply(address user, uint256 _minTxnAmt, uint256 _minEThAmt, bool _firstTimeOnly)
+        external
+        view
+        returns (bool)
+    {
         UserEntry storage _entry = customerData[msg.sender];
         UserData memory _data = _entry.data[saddress(user)];
-        if (_minTxnAmt > uint(_data.totalPurchase)) {
+        if (_minTxnAmt > uint256(_data.totalPurchase)) {
             return false;
         }
         if (_minEThAmt > uint256(address(user).balance)) {

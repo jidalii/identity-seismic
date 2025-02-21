@@ -6,7 +6,6 @@ import {Script, console} from "forge-std/Script.sol";
 import "../src/IDProtocol.sol";
 
 contract DeployScript is Script {
-
     function setUp() public {}
 
     function run() public {
@@ -20,4 +19,3 @@ contract DeployScript is Script {
         console.log("IDProtocol deployed at address: ", address(idProtocol));
     }
 }
-

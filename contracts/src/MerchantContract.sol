@@ -49,7 +49,6 @@ contract MerchantContract {
     uint256 newProdId;
     uint256 newCoupId;
 
-
     error InvalidCouponCreation();
     error InvalidCouponUsage();
 
@@ -59,7 +58,7 @@ contract MerchantContract {
         _;
     }
 
-/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~transaction functions~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    /// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~transaction functions~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     /// @notice ETH/native token specific transaction function
     function purchaseETH(uint256[] memory prodIds, uint256[] memory prodAmts, uint256 coupId) external payable {
         _validatePurchase(prodIds, prodAmts, coupId);
@@ -73,10 +72,12 @@ contract MerchantContract {
     }
 
     /// @notice token transaction function
-    function purchaseERC20(address token, uint256[] memory prodIds, uint256[] memory prodAmts, uint256 coupId) external payable {
+    function purchaseERC20(address token, uint256[] memory prodIds, uint256[] memory prodAmts, uint256 coupId)
+        external
+        payable
+    {
         _validatePurchase(prodIds, prodAmts, coupId);
         require(allowedTokens[token], "Token is not approved");
-
 
         uint256 totalPriceTk = _calculateTotalPrice(prodIds, prodAmts);
         Coupon storage _coupon = coupons[coupId];
@@ -89,22 +90,23 @@ contract MerchantContract {
         IERC20(token).transferFrom(msg.sender, address(this), finalPriceTk);
 
         adjustStock(prodIds, prodAmts);
-        
 
         suint purchaseAmount = suint(finalPriceTk * MockOracle(oracle).calcRatio(token));
         IDProtocol(core).updateUserEntry(business, saddress(msg.sender), purchaseAmount);
     }
 
-    function _calculateDiscountedPrice(Coupon storage _coupon, uint256 totalPriceTk) internal view returns(uint256) {
+    function _calculateDiscountedPrice(Coupon storage _coupon, uint256 totalPriceTk) internal view returns (uint256) {
         // check if the coupon is valid
-        bool isSuccess = IDProtocol(core).checkValidCouponApply(msg.sender, _coupon.minTxnAmt, _coupon.minEthAmt, _coupon.firstTimeOnly);
+        bool isSuccess = IDProtocol(core).checkValidCouponApply(
+            msg.sender, _coupon.minTxnAmt, _coupon.minEthAmt, _coupon.firstTimeOnly
+        );
         if (!isSuccess) {
             revert InvalidCouponUsage();
         }
 
         // cal discounted price
         uint256 finalPriceTk;
-        if(_coupon.discountAmt > 0) {
+        if (_coupon.discountAmt > 0) {
             finalPriceTk -= _coupon.discountAmt;
         } else {
             finalPriceTk -= totalPriceTk * _coupon.discountBp / 10000;
@@ -119,9 +121,11 @@ contract MerchantContract {
             uint256 amt = prodAmts[i];
             require(products[id].stock >= amt, "Insufficient stock");
         }
-        
+
         require(coupons[coupId].isActive, "Coupon is not active");
-        require(coupons[coupId].usage > coupons[coupId].customerCount[saddress(msg.sender)], "Coupon usage limit reached");
+        require(
+            coupons[coupId].usage > coupons[coupId].customerCount[saddress(msg.sender)], "Coupon usage limit reached"
+        );
     }
 
     /// @notice helper function to adjust the stock of a prod
@@ -133,7 +137,11 @@ contract MerchantContract {
         }
     }
 
-    function _calculateTotalPrice(uint256[] memory prodIds, uint256[] memory prodAmts) internal view returns (uint256) {
+    function _calculateTotalPrice(uint256[] memory prodIds, uint256[] memory prodAmts)
+        internal
+        view
+        returns (uint256)
+    {
         uint256 totalPrice;
         for (uint256 i = 0; i < prodIds.length; i++) {
             totalPrice += (products[prodIds[i]].price * prodAmts[i]);
@@ -141,8 +149,7 @@ contract MerchantContract {
         return totalPrice;
     }
 
-
-/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~merchant functions~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    /// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~merchant functions~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     /// @notice function for businesses to create products
     function createProduct(uint256 prc, uint256 stck) public businessOnly {
         Product storage newProduct = products[newProdId];
@@ -157,7 +164,14 @@ contract MerchantContract {
     }
 
     /// @notice function for businesses to create coupons
-    function createCoupon(uint256 _txnAmt, uint256 _ethAmt, bool _firstTime, uint256 _usageNum, uint256 _discountBp, uint256 _discountAmt) public businessOnly {
+    function createCoupon(
+        uint256 _txnAmt,
+        uint256 _ethAmt,
+        bool _firstTime,
+        uint256 _usageNum,
+        uint256 _discountBp,
+        uint256 _discountAmt
+    ) public businessOnly {
         if (_discountAmt == 0 && _discountBp == 0) {
             revert InvalidCouponCreation();
         }
@@ -182,7 +196,7 @@ contract MerchantContract {
         allowedTokens[token] = true;
     }
 
-    /// @notice function for business to move revenue to their wallet 
+    /// @notice function for business to move revenue to their wallet
     function collectRevenue(address token) external payable businessOnly {
         require(allowedTokens[token], "Token is not approved.");
         if (token == ETH_ADDRESS) {
