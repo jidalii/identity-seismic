@@ -7,15 +7,15 @@ import "./Verifier.sol";
 import "./MerchantContract.sol";
 import "./MockOracle.sol";
 
-contract Merchant {
-    address public owner;
-    string public name;
+// contract Merchant {
+//     address public owner;
+//     string public name;
 
-    constructor(address _owner, string memory _name) {
-        owner = _owner;
-        name = _name;
-    }
-}
+//     constructor(address _owner, string memory _name) {
+//         owner = _owner;
+//         name = _name;
+//     }
+// }
 
 contract IDProtocol {
     //*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*//
@@ -208,7 +208,7 @@ contract IDProtocol {
     function register(MerchantRegistReq calldata _req) external {
         _validateRegiester(_req);
 
-        Merchant newMerchant = new Merchant(_req.owner, _req.name);
+        MerchantContract newMerchant = new MerchantContract(_req.owner, _req.name, address(oracle));
         merchants.push(address(newMerchant));
         merchantData[address(newMerchant)] = MerchantData(address(newMerchant), _req.owner, _req.name);
 
