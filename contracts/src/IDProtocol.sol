@@ -5,6 +5,7 @@ import "./IERC20.sol";
 
 import "./Verifier.sol";
 import "./MerchantContract.sol";
+import "./MockOracle.sol";
 
 contract Merchant {
     address public owner;
@@ -25,6 +26,12 @@ contract IDProtocol {
         suint256 totalPurchase;
         suint256 numPurchase;
         sbool isFirstTime; // false if first time, true if not
+    }
+
+    struct UserDataPub {
+        uint256 totalPurchase;
+        uint256 numPurchase;
+        bool isFirstTime; // false if first time, true if not
     }
 
     struct UserEntry {
@@ -86,6 +93,7 @@ contract IDProtocol {
         suint minTxnFrequency;
     }
 
+    event ProtocolDeployed(address owner, address verif, address oracle);
     event MerchantRegistered(address merchant, address owner, string name);
     event VaultWithdrawn(address token, address to, uint256 amount);
 
@@ -94,6 +102,7 @@ contract IDProtocol {
     address public owner;
 
     Verifier public verif;
+    MockOracle public oracle;
 
     saddress[] private users;
     mapping(saddress => bool) private isUser;
@@ -109,6 +118,8 @@ contract IDProtocol {
     constructor() {
         owner = msg.sender;
         verif = new Verifier();
+        oracle = new MockOracle();
+        emit ProtocolDeployed(owner, address(verif), address(oracle));
     }
 
     modifier onlyOwner() {
@@ -145,6 +156,7 @@ contract IDProtocol {
 
     function updateScore(uint256[8] calldata _proof, uint256[1] calldata _pubWitness, OffchainIdentity calldata newVals)
         public
+        view
     {
         verif.verifyProof(_proof, _pubWitness);
         Identity memory _userIdentity = onchainId[saddress(msg.sender)];
@@ -215,6 +227,26 @@ contract IDProtocol {
         }
         _userData.totalPurchase += purchaseAmount;
         _userData.numPurchase += suint256(1);
+    }
+
+    function getUserEntry(address _merchant, saddress user) external view returns (UserDataPub memory) {
+        UserData memory _data = customerData[_merchant].data[user];
+        return UserDataPub(uint(_data.totalPurchase), uint(_data.numPurchase), bool(_data.isFirstTime));
+    }
+
+    function checkValidCouponApply(address user, uint256 _minTxnAmt, uint256 _minEThAmt, bool _firstTimeOnly) external view returns (bool) {
+        UserEntry storage _entry = customerData[msg.sender];
+        UserData memory _data = _entry.data[saddress(user)];
+        if (_minTxnAmt > uint(_data.totalPurchase)) {
+            return false;
+        }
+        if (_minEThAmt > uint256(address(user).balance)) {
+            return false;
+        }
+        if (_firstTimeOnly && !bool(_data.isFirstTime)) {
+            return false;
+        }
+        return true;
     }
 
     function _validateRegiester(MerchantRegistReq calldata _req) internal pure {
