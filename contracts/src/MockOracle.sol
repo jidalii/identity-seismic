@@ -11,17 +11,14 @@ contract MockOracle {
      * This is purely for demonstration purposes
      */
     constructor(){
-        oracle[address(1)] = 5;
-        oracle[address(2)] = 1/2;
-        oracle[address(3)] = 2;
+        oracle[address(1)] = 1 ether/2000; // USDC
+        oracle[address(2)] = 0.5 ether; // SEI
+        oracle[address(3)] = 1 ether; // WETH
     }
 
-    /**
-     * @notice the function merchants will call to determine the value in ETH of the token
-     * @param address tokenAddr: address of the token being queried
-     * @return uint the value in ETH of a single unit of the token
-     */
-    function calcRatio(address tokenAddr) external returns(uint){
+    
+    /// @notice the function merchants will call to determine the value in ETH of the token
+    function calcRatio(address tokenAddr) external view returns(uint){
         return oracle[tokenAddr];
     }
     
