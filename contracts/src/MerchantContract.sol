@@ -5,7 +5,7 @@ import "./IDProtocol.sol";
 import "./IERC20.sol";
 import {MockOracle} from "./MockOracle.sol";
 
-// import "forge-std/console.sol";
+import "forge-std/console.sol";
 
 contract MerchantContract {
     /// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~merchant data~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -14,7 +14,7 @@ contract MerchantContract {
     string public name;
     address payable public core;
     address public oracle;
-    address public ETH_ADDRESS = address(0x0);
+    address public ETH_ADDRESS = address(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE);
     mapping(address => bool) allowedTokens;
 
     constructor(address businessAddr, string memory businessName, address _oracle) {
@@ -107,7 +107,7 @@ contract MerchantContract {
         payable
     {
         _validatePurchase(prodIds, prodAmts, coupId);
-        require(allowedTokens[token], "Token is not approved");
+        // require(allowedTokens[token], "Token is not approved");
 
         uint256 totalPriceTk = _calculateTotalPrice(prodIds, prodAmts);
         Coupon storage _coupon = coupons[coupId];
@@ -118,11 +118,14 @@ contract MerchantContract {
         uint256 newCnt = uint(_coupon.customerCount[address(msg.sender)]) +1;
         _coupon.customerCount[address(msg.sender)] = suint(newCnt);
 
+        uint256 priceRatio = MockOracle(oracle).calcRatio(token);
+        finalPriceTk = finalPriceTk * 1 ether / priceRatio;
+
         IERC20(token).transferFrom(msg.sender, address(this), finalPriceTk);
 
         adjustStock(prodIds, prodAmts);
 
-        suint purchaseAmount = suint(finalPriceTk * MockOracle(oracle).calcRatio(token));
+        suint purchaseAmount = suint(finalPriceTk * priceRatio);
         IDProtocol(core).updateUserEntry(business, saddress(msg.sender), purchaseAmount);
     }
 
@@ -235,22 +238,23 @@ contract MerchantContract {
     }
 
     /// @notice function for business to move revenue to their wallet
-    function collectRevenue(address token) external payable businessOnly {
-        require(allowedTokens[token], "Token is not approved.");
-        if (token == ETH_ADDRESS) {
+    function collectRevenue(address _token, address _to) external payable businessOnly {
+        // require(allowedTokens[token], "Token is not approved.");
+        if (_token == ETH_ADDRESS) {
+            // console.log("balance: ", address(this).balance);
             uint256 fee = address(this).balance / 100;
             uint256 remainder = address(this).balance - fee;
+            // console.log("fee: ", fee);
+            // console.log("remainder: ", remainder);
 
-            (bool success,) = business.call{value: remainder}("");
-            require(success, "Transfer failed.");
-            (bool feeSuccess,) = core.call{value: fee}("");
-            require(feeSuccess, "Fee transfer failed.");
+            require(transferETH(payable(_to), remainder), "failed to collect revenue");
+            require(transferETH(core, fee), "failed to transfer fee to core");
         } else {
-            uint256 fee = IERC20(token).balanceOf(address(this)) / 100;
-            uint256 remainder = IERC20(token).balanceOf(address(this)) - fee;
+            uint256 fee = IERC20(_token).balanceOf(address(this)) / 100;
+            uint256 remainder = IERC20(_token).balanceOf(address(this)) - fee;
 
-            IERC20(token).transferFrom(address(this), business, remainder);
-            IERC20(token).transferFrom(address(this), core, fee);
+            IERC20(_token).transfer(business, remainder);
+            IERC20(_token).transfer(core, fee);
         }
     }
 }

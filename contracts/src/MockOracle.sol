@@ -14,6 +14,7 @@ contract MockOracle {
         oracle[address(1)] = 1 ether / 2000; // USDC
         oracle[address(2)] = 0.5 ether; // SEI
         oracle[address(3)] = 1 ether; // WETH
+        oracle[address(0x5615dEB798BB3E4dFa0139dFa1b3D433Cc23b72f)] = 1 ether/ 2000; // USDT
     }
 
     /// @notice the function merchants will call to determine the value in ETH of the token

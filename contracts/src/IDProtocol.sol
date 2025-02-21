@@ -76,7 +76,6 @@ contract IDProtocol {
         suint totalStaked;
         suint txnFrequency;
     }
-    // Identity identity;
 
     struct QueryReq {
         suint minGithubStar;
@@ -147,13 +146,73 @@ contract IDProtocol {
     //*                      IDENTITY-RELATED                      *//
     //*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*//
 
+    function getScore(address _user) public view returns (uint256) {
+        OffchainIdentity memory _offchain = onchainId[_user].offchain;
+        OnchainIdentity memory _onchain = onchainId[_user].onchain;
+        return _addOffchainPt(_offchain) + _addOnchainPt(_onchain);
+    }
+
+    function _addOffchainPt(OffchainIdentity memory _offchain) internal pure returns (uint256 score) {
+        if (bool(_offchain.isGithub)) {
+            score += 5;
+
+            uint _githubStar = uint(_offchain.githubStar);
+            if (_githubStar < 50) {
+                score += 0;
+            } else if (_githubStar < 100) {
+                score += 1;
+            } else if (_githubStar < 200) {
+                score += 2;
+            } else if (_githubStar < 400) {
+                score += 3;
+            } else if (_githubStar < 500) {
+                score += 3;
+            } else {
+                score += 4;
+            }
+        }
+        if (_offchain.isTwitter) {
+            score += 5;
+            uint _twitterFollower = uint(_offchain.twitterFollower);
+            if (_twitterFollower < 50) {
+                score += 0;
+            } else if (_twitterFollower < 100) {
+                score += 1;
+            } else if (_twitterFollower < 200) {
+                score += 2;
+            } else if (_twitterFollower < 350) {
+                score += 3;
+            } else if (_twitterFollower < 500) {
+                score += 3;
+            } else if (_twitterFollower < 700) {
+                score += 3;
+            } else {
+                score += 4;
+            }
+        }
+    }
+
+    function _addOnchainPt(OnchainIdentity memory _onchain) internal view returns (uint256 score) {
+        score += uint(_onchain.totalStaked) / 1 ether;
+        score += uint(_onchain.txnFrequency);
+
+        address[] memory _merchants = merchants;
+
+        for (uint256 i = 0; i < uint256(_merchants.length); i++) {
+            UserData memory _data = customerData[_merchants[uint(i)]].data[saddress(msg.sender)];
+            score += uint(_data.totalPurchase) / 1 ether;
+            score += uint(_data.numPurchase);
+        }
+
+        return score;
+    }
+
     function updateScore(uint256[8] calldata _proof, uint256[1] calldata _pubWitness, OffchainIdentity calldata newVals)
         public
         view
     {
         verif.verifyProof(_proof, _pubWitness);
         Identity memory _userIdentity = onchainId[msg.sender];
-        // _userIdentity.offchain = newVals;
     }
 
     function getIdentity() public view returns (Identity memory) {
@@ -237,19 +296,12 @@ contract IDProtocol {
         UserEntry storage _entry = customerData[msg.sender];
         UserData memory _data = _entry.data[saddress(user)];
         if (_minTxnNum != 0 && _minTxnNum > uint256(_data.numPurchase)) {
-            // console.log("1");
             return false;
         }
         if (_minEThAmt != 0 && _minEThAmt > uint256(_data.totalPurchase)) {
-            // console.log("2");
-            // console.log("minEThAmt: ", _minEThAmt);
-            // console.log("totalPurchase: ", uint256(_data.totalPurchase));
             return false;
         }
         if (_firstTimeOnly && bool(_data.isFirstTime)) {
-            // console.log("3");
-            // console.log(_firstTimeOnly);
-            // console.log(bool(_data.isFirstTime));
             return false;
         }
         return true;
@@ -259,8 +311,4 @@ contract IDProtocol {
         require(_req.owner != address(0), "Zero address");
         require(bytes(_req.name).length > 0, "Empty name");
     }
-
-    // need to compute overall score? dunno
-    // need to add extra onchain proof mechanisms
-    // main functionality is to prove yo uare a human, not a bot and for a buiness to search for a targeted defografic
 }
