@@ -18,7 +18,7 @@ Our on-chain identity protocol aggregates and verifies user data (both off-chain
 
 - [link](https://docs.google.com/document/d/1oXPV4TauTvuL1x8DHPjNY1MvwvI6XQZFvj--DqDctcw/edit?usp=sharing).
 
-## File sturture
+## File Structure
 
 ```shell
 .
