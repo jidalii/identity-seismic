@@ -5,7 +5,9 @@ import "forge-std/Test.sol";
 import "forge-std/console.sol";
 
 import {CheatCodes} from "./ICheatCodes.sol";
+
 import {IDProtocol} from "src/IDProtocol.sol";
+import {ERC20} from "src/ERC20.sol";
 import {MerchantContract} from "src/MerchantContract.sol";
 
 contract IDProtocolTest is Test {
@@ -20,12 +22,12 @@ contract IDProtocolTest is Test {
 
     IDProtocol.MerchantRegistReq _req1 = IDProtocol.MerchantRegistReq({
         owner: merchant1,
-        name: "First Merchant"
+        name: "Coffee Shop"
     });
 
     IDProtocol.MerchantRegistReq _req2 = IDProtocol.MerchantRegistReq({
         owner: merchant1,
-        name: "First Merchant"
+        name: "Sports Retail"
     });
 
     function setUp() public {
@@ -252,5 +254,89 @@ contract IDProtocolTest is Test {
         console.log("User 2 balance after purchase: ", address(user2).balance);
         assertEq(refund, address(user2).balance);
 
+    }
+
+    function test_purchaseWithERC20() public {
+        console.log("\n0. Deploying ERC20 token...");
+        ERC20 token = new ERC20("USD Thether", "USDT", 18);
+        console.log("ERC20 Token address: ", address(token));
+        
+        console.log("\n1. Registering merchant...");
+        vm.prank(merchant1);
+        address _merchant = idProtocol.register(_req1);
+        console.log("Merchant created: ", _merchant);
+
+        MerchantContract merchant = MerchantContract(_merchant);
+
+        console.log("\n2. Creating product 0...");
+        vm.prank(merchant1);
+        merchant.createProduct(0.1 ether, 100, "Lavazza 2 Pack Crema E Gusto Ground Coffee 8.8oz/250g Each");
+
+        logProductInfo(merchant, 0);
+
+        console.log("\n3. Creating product 1...");
+        vm.prank(merchant1);
+        merchant.createProduct(0.2 ether, 2000, "Lavazza Costiera Gran Aroma Ground Coffee 12oz Bag");
+
+        logProductInfo(merchant, 1);
+
+
+        uint256[] memory prodIds = new uint256[](2);
+        prodIds[0] = 0;
+        prodIds[1] = 1;
+
+        uint256[] memory prodAmts = new uint256[](2);
+        prodAmts[0] = 1;
+        prodAmts[1] = 1;
+
+        // vm.deal(user1, 0.3 ether);
+        vm.startPrank(user1);
+        token.mint(user1, 0.3 * 2000 ether);
+        token.approve(address(merchant), 0.3 * 2000 ether);
+        vm.stopPrank();
+        console.log("\n4. User 1 purchasing products (without applied coupon)...");
+        console.log("User 1 USDT balance before purchase: ", token.balanceOf(user1));
+        vm.prank(user1);
+        merchant.purchaseERC20(address(token), prodIds, prodAmts, 0);
+
+        logProductInfo(merchant, 0);
+        logProductInfo(merchant, 1);
+        console.log("User 1 USDT balance after purchase: ", token.balanceOf(user1));
+        assertEq(0, token.balanceOf(user1));
+    }
+
+    function test_withdrawProfits() public {
+        vm.prank(merchant1);
+        address _merchant = idProtocol.register(_req1);
+
+        MerchantContract merchant = MerchantContract(_merchant);
+
+        vm.prank(merchant1);
+        merchant.createProduct(1 ether, 100, "Lavazza 2 Pack Crema E Gusto Ground Coffee 8.8oz/250g Each");
+
+        vm.prank(merchant1);
+        merchant.createProduct(2 ether, 2000, "Lavazza Costiera Gran Aroma Ground Coffee 12oz Bag");
+
+        uint256[] memory prodIds = new uint256[](2);
+        prodIds[0] = 0;
+        prodIds[1] = 1;
+
+        uint256[] memory prodAmts = new uint256[](2);
+        prodAmts[0] = 10;
+        prodAmts[1] = 10;
+
+        uint _total = 10 * 1 ether + 10 * 2 ether;
+        console.log("User 1 made a purchase of total: ", _total);
+        vm.deal(user1, _total);
+        vm.prank(user1);
+        merchant.purchaseETH{value: _total}(prodIds, prodAmts, 0);
+
+        assertEq(0, address(user1).balance);
+
+        vm.prank(merchant1);
+
+        merchant.collectRevenue(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE, merchant1);
+        console.log("Merchant balance after withdrawal: ", merchant1.balance);
+        console.log("Transaction fee for withdrawal: ", 30 ether - merchant1.balance);
     }
 }
