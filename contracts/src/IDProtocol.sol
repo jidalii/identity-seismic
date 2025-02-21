@@ -7,15 +7,8 @@ import "./Verifier.sol";
 import "./MerchantContract.sol";
 import "./MockOracle.sol";
 
-// contract Merchant {
-//     address public owner;
-//     string public name;
+import "forge-std/console.sol";
 
-//     constructor(address _owner, string memory _name) {
-//         owner = _owner;
-//         name = _name;
-//     }
-// }
 
 contract IDProtocol {
     //*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*//
@@ -112,7 +105,7 @@ contract IDProtocol {
 
     mapping(address => UserEntry) customerData;
 
-    mapping(saddress => Identity) onchainId;
+    mapping(address => Identity) onchainId;
     saddress[] onchainIdAddresses;
 
     constructor() {
@@ -159,12 +152,12 @@ contract IDProtocol {
         view
     {
         verif.verifyProof(_proof, _pubWitness);
-        Identity memory _userIdentity = onchainId[saddress(msg.sender)];
-        _userIdentity.offchain = newVals;
+        Identity memory _userIdentity = onchainId[msg.sender];
+        // _userIdentity.offchain = newVals;
     }
 
     function getIdentity() public view returns (Identity memory) {
-        return onchainId[saddress(msg.sender)];
+        return onchainId[msg.sender];
     }
 
     function query(QueryReq memory _query) external view returns (address[] memory) {
@@ -187,15 +180,15 @@ contract IDProtocol {
     }
 
     function isMatched(QueryReq memory _query, address addr) public view returns (bool) {
-        if (onchainId[saddress(addr)].offchain.githubStar < _query.minGithubStar) {
+        if (onchainId[addr].offchain.githubStar < _query.minGithubStar) {
             return false;
-        } else if (onchainId[saddress(addr)].offchain.twitterFollower < _query.minTwitterFollower) {
+        } else if (onchainId[addr].offchain.twitterFollower < _query.minTwitterFollower) {
             return false;
-        } else if (onchainId[saddress(addr)].onchain.totalStaked < _query.minTotalStaked) {
+        } else if (onchainId[addr].onchain.totalStaked < _query.minTotalStaked) {
             return false;
         } else if (suint(address(addr).balance) < _query.minBalance) {
             return false;
-        } else if (onchainId[saddress(addr)].onchain.txnFrequency < _query.minTxnFrequency) {
+        } else if (onchainId[addr].onchain.txnFrequency < _query.minTxnFrequency) {
             return false;
         }
         return true;
@@ -205,7 +198,7 @@ contract IDProtocol {
     //*                      MERCHANT-RELATED                      *//
     //*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*//
 
-    function register(MerchantRegistReq calldata _req) external {
+    function register(MerchantRegistReq calldata _req) external returns (address) {
         _validateRegiester(_req);
 
         MerchantContract newMerchant = new MerchantContract(_req.owner, _req.name, address(oracle));
@@ -213,10 +206,10 @@ contract IDProtocol {
         merchantData[address(newMerchant)] = MerchantData(address(newMerchant), _req.owner, _req.name);
 
         emit MerchantRegistered(address(newMerchant), _req.owner, _req.name);
+        return address(newMerchant);
     }
 
     function updateUserEntry(address _merchant, saddress user, suint256 purchaseAmount) external {
-        require(msg.sender == _merchant, "Only the merchant can update their own data");
 
         UserEntry storage _customerData = customerData[_merchant];
 
@@ -227,6 +220,8 @@ contract IDProtocol {
         }
         _userData.totalPurchase += purchaseAmount;
         _userData.numPurchase += suint256(1);
+        console.log("updateUserEntry", uint(_userData.totalPurchase));
+        console.log("updateUserEntry", uint(_userData.numPurchase));
     }
 
     function getUserEntry(address _merchant, saddress user) external view returns (UserDataPub memory) {
@@ -234,20 +229,27 @@ contract IDProtocol {
         return UserDataPub(uint256(_data.totalPurchase), uint256(_data.numPurchase), bool(_data.isFirstTime));
     }
 
-    function checkValidCouponApply(address user, uint256 _minTxnAmt, uint256 _minEThAmt, bool _firstTimeOnly)
+    function checkValidCouponApply(address user, uint256 _minTxnNum, uint256 _minEThAmt, bool _firstTimeOnly)
         external
         view
         returns (bool)
     {
         UserEntry storage _entry = customerData[msg.sender];
         UserData memory _data = _entry.data[saddress(user)];
-        if (_minTxnAmt > uint256(_data.totalPurchase)) {
+        if (_minTxnNum != 0 && _minTxnNum > uint256(_data.numPurchase)) {
+            // console.log("1");
             return false;
         }
-        if (_minEThAmt > uint256(address(user).balance)) {
+        if (_minEThAmt != 0 && _minEThAmt > uint256(_data.totalPurchase)) {
+            // console.log("2");
+            // console.log("minEThAmt: ", _minEThAmt);
+            // console.log("totalPurchase: ", uint256(_data.totalPurchase));
             return false;
         }
-        if (_firstTimeOnly && !bool(_data.isFirstTime)) {
+        if (_firstTimeOnly && bool(_data.isFirstTime)) {
+            // console.log("3");
+            // console.log(_firstTimeOnly);
+            // console.log(bool(_data.isFirstTime));
             return false;
         }
         return true;

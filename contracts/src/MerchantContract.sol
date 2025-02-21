@@ -5,6 +5,8 @@ import "./IDProtocol.sol";
 import "./IERC20.sol";
 import {MockOracle} from "./MockOracle.sol";
 
+import "forge-std/console.sol";
+
 contract MerchantContract {
     /// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~merchant data~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     /// @notice vars about the contract details
@@ -29,6 +31,7 @@ contract MerchantContract {
     struct Product {
         uint256 price;
         uint256 stock;
+        string name;
     }
 
     /// @notice struct detailing the coupon
@@ -37,15 +40,15 @@ contract MerchantContract {
         uint256 minEthAmt;
         bool firstTimeOnly;
         uint256 usage;
-        mapping(saddress => uint256) customerCount;
+        mapping(address => suint256) customerCount;
         uint256 discountBp;
         uint256 discountAmt;
         bool isActive;
     }
 
     /// @notice active mappings/global vars
-    mapping(uint256 => Product) products;
-    mapping(uint256 => Coupon) coupons;
+    mapping(uint256 => Product) private products;
+    mapping(uint256 => Coupon) private coupons;
     uint256 newProdId;
     uint256 newCoupId;
 
@@ -58,17 +61,44 @@ contract MerchantContract {
         _;
     }
 
+    function transferETH(address _address, uint256 amount) private returns (bool) {
+        require(_address != address(0), "Zero addresses are not allowed.");
+
+        (bool os,) = payable(_address).call{value: amount}("");
+
+        return os;
+    }
+
+    function getProduct(uint256 id) public view returns (Product memory) {
+        return products[id];
+    }
+
     /// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~transaction functions~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     /// @notice ETH/native token specific transaction function
     function purchaseETH(uint256[] memory prodIds, uint256[] memory prodAmts, uint256 coupId) external payable {
         _validatePurchase(prodIds, prodAmts, coupId);
 
         uint256 totalPrice = _calculateTotalPrice(prodIds, prodAmts);
-        require(msg.value == totalPrice);
+
+        Coupon storage _coupon = coupons[coupId];
+
+        uint256 finalPriceTk = _calculateDiscountedPrice(_coupon, totalPrice);
+
+        // update coupon state
+        uint256 newCnt = uint(_coupon.customerCount[address(msg.sender)]) +1;
+        _coupon.customerCount[address(msg.sender)] = suint(newCnt);
+
+        uint256 gap = msg.value - finalPriceTk;
+        // console.log("gap: ", gap);
+        // console.log("msg.valu: ", msg.value);
+        // console.log("balance: ", address(this).balance);
+        if (gap > 0) {
+            require(transferETH(msg.sender, gap), "failed to refund");
+        }
 
         adjustStock(prodIds, prodAmts);
 
-        IDProtocol(core).updateUserEntry(business, saddress(msg.sender), suint(msg.value));
+        IDProtocol(core).updateUserEntry(address(this), saddress(msg.sender), suint(msg.value));
     }
 
     /// @notice token transaction function
@@ -85,7 +115,8 @@ contract MerchantContract {
         uint256 finalPriceTk = _calculateDiscountedPrice(_coupon, totalPriceTk);
 
         // update coupon state
-        _coupon.customerCount[saddress(msg.sender)]++;
+        uint256 newCnt = uint(_coupon.customerCount[address(msg.sender)]) +1;
+        _coupon.customerCount[address(msg.sender)] = suint(newCnt);
 
         IERC20(token).transferFrom(msg.sender, address(this), finalPriceTk);
 
@@ -107,9 +138,12 @@ contract MerchantContract {
         // cal discounted price
         uint256 finalPriceTk;
         if (_coupon.discountAmt > 0) {
-            finalPriceTk -= _coupon.discountAmt;
+            if (totalPriceTk < _coupon.discountAmt) {
+                return totalPriceTk;
+            }
+            finalPriceTk = totalPriceTk - _coupon.discountAmt;
         } else {
-            finalPriceTk -= totalPriceTk * _coupon.discountBp / 10000;
+            finalPriceTk = totalPriceTk - totalPriceTk * _coupon.discountBp / 10_000;
         }
         return finalPriceTk;
     }
@@ -122,9 +156,12 @@ contract MerchantContract {
             require(products[id].stock >= amt, "Insufficient stock");
         }
 
+        if (coupId == 0) {
+            return;
+        }
         require(coupons[coupId].isActive, "Coupon is not active");
         require(
-            coupons[coupId].usage > coupons[coupId].customerCount[saddress(msg.sender)], "Coupon usage limit reached"
+            coupons[coupId].usage > uint(coupons[coupId].customerCount[address(msg.sender)]), "Coupon usage limit reached"
         );
     }
 
@@ -151,10 +188,11 @@ contract MerchantContract {
 
     /// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~merchant functions~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     /// @notice function for businesses to create products
-    function createProduct(uint256 prc, uint256 stck) public businessOnly {
+    function createProduct(uint256 _prc, uint256 _stck, string calldata _name) public businessOnly {
         Product storage newProduct = products[newProdId];
-        newProduct.price = prc;
-        newProduct.stock = stck;
+        newProduct.price = _prc;
+        newProduct.stock = _stck;
+        newProduct.name = _name;
         newProdId++;
     }
 
