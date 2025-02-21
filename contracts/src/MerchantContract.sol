@@ -5,8 +5,6 @@ import "./IDProtocol.sol";
 import "./IERC20.sol";
 import {MockOracle} from "./MockOracle.sol";
 
-import "forge-std/console.sol";
-
 contract MerchantContract {
     /// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~merchant data~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     /// @notice vars about the contract details
