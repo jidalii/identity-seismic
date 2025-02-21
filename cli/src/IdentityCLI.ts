@@ -1,9 +1,9 @@
 import { createShieldedPublicClient, createShieldedWalletClient, shieldedWriteContract, seismicDevnet, sanvil } from 'seismic-viem';
 import { privateKeyToAccount } from 'viem/accounts';
-import IDProtocolABI from '../contracts/build/IDProtocol.json';
-import MerchantContractABI from '../contracts/build/MerchantContract.json';
-import MockOracleABI from '../contracts/build/MockOracle.json';
-import VerifierABI from '../contracts/build/Verifier.json';
+import IDProtocolABI from '../../contracts/build/IDProtocol.json';
+import MerchantContractABI from '../../contracts/build/MerchantContract.json';
+import MockOracleABI from '../../contracts/build/MockOracle.json';
+import VerifierABI from '../../contracts/build/Verifier.json';
 import { Command } from 'commander';
 import dotenv from 'dotenv';
 
@@ -39,7 +39,7 @@ async function safeExecute(fn: Function, ...args: any[]) {
 // Example function to interact with IDProtocol
 async function getMerchantName() {
   return await publicClient.readContract({
-    address: IDProtocolAddress!,
+    address: MerchantContractAddress!,
     abi: IDProtocolABI,
     functionName: "name",
   });
