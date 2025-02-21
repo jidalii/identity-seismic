@@ -14,7 +14,7 @@ Seismic’s encrypted network provides a trustworthy platform for merchants to c
 
 Our on-chain identity protocol aggregates and verifies user data (both off-chain and on-chain) using ZKPs, enabling merchants to start their businesses, create customizable reward systems, and securely interact with customers in a decentralized environment.
 
-### Design doc
+### Design Document
 
 - [link](https://docs.google.com/document/d/1oXPV4TauTvuL1x8DHPjNY1MvwvI6XQZFvj--DqDctcw/edit?usp=sharing).
 
