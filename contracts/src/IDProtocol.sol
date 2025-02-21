@@ -218,7 +218,7 @@ contract IDProtocol {
     //*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*//
 
     /**
-     * @dev Retrieves a user's score based on their identity.
+     * @notice Get the identity score of a user.
      * @param _user The user's address.
      * @return The calculated score.
      */
@@ -299,15 +299,17 @@ contract IDProtocol {
 
     /**
      * @dev Returns the identity details of the caller.
-     * @return The identity data.
+     * @return Identity The identity data.
      */
     function getIdentity() public view returns (Identity memory) {
         return onchainId[msg.sender];
     }
 
+    /**
+     * @dev Registers a new identity.
+     * @param _query The query requirements.
+     */
     function query(QueryReq memory _query) external view returns (address[] memory) {
-        // not sure about this
-        // do we want ot iterate through and do all this stuff or is this just a one to one form the business POV
         uint256 matchedCnt = 0;
         for (uint256 i = 0; i < uint256(onchainIdAddresses.length); i++) {
             if (isMatched(_query, address(onchainIdAddresses[suint(i)]))) {
@@ -324,6 +326,11 @@ contract IDProtocol {
         return matchedUsers;
     }
 
+    /**
+     * @dev Registers a new identity.
+     * @param _query The query requirements.
+     * @param addr The address of the identity.
+     */
     function isMatched(QueryReq memory _query, address addr) public view returns (bool) {
         if (onchainId[addr].offchain.githubStar < _query.minGithubStar) {
             return false;
@@ -346,7 +353,7 @@ contract IDProtocol {
     /**
      * @dev Registers a new merchant.
      * @param _req The merchant registration request.
-     * @return The address of the new merchant contract.
+     * @return address of the new merchant contract.
      */
     function register(MerchantRegistReq calldata _req) external returns (address) {
         _validateRegister(_req);
@@ -359,6 +366,12 @@ contract IDProtocol {
         return address(newMerchant);
     }
 
+    /**
+     * @notice Update the user entry for a given user.
+     * @param _merchant The merchant address.
+     * @param user The user address.
+     * @param purchaseAmount The purchase amount.
+     */
     function updateUserEntry(address _merchant, saddress user, suint256 purchaseAmount) external {
 
         UserEntry storage _customerData = customerData[_merchant];
@@ -374,11 +387,24 @@ contract IDProtocol {
         // console.log("updateUserEntry", uint(_userData.numPurchase));
     }
 
+    /**
+     * @notice Get UserEntry for a given user.
+     * @param _merchant The merchant address.
+     * @param user The user address.
+     * @return The merchant data.
+     */
     function getUserEntry(address _merchant, saddress user) external view returns (UserDataPub memory) {
         UserData memory _data = customerData[_merchant].data[user];
         return UserDataPub(uint256(_data.totalPurchase), uint256(_data.numPurchase), bool(_data.isFirstTime));
     }
 
+    
+    /// @notice Check if the user is eligible for applying the coupon
+    /// @param user The user address.
+    /// @param _minTxnNum The minimum number of transactions required.
+    /// @param _minEThAmt The minimum amount of ETH required.
+    /// @param _firstTimeOnly Whether the coupon is for first-time users only.
+    /// @return bool Is valid or not
     function checkValidCouponApply(address user, uint256 _minTxnNum, uint256 _minEThAmt, bool _firstTimeOnly)
         external
         view

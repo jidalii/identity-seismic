@@ -28,6 +28,9 @@ contract MerchantContract {
     }
 
     /// @notice struct detailing the business products
+    /// @param price price of the product
+    /// @param stock stock of the product
+    /// @param name name of the product
     struct Product {
         uint256 price;
         uint256 stock;
@@ -35,6 +38,14 @@ contract MerchantContract {
     }
 
     /// @notice struct detailing the coupon
+    /// @param minTxnAmt minimum transaction number on the platform
+    /// @param minEthAmt minimum transaction amount in ETH
+    /// @param firstTimeOnly if the coupon is for first time users only
+    /// @param usage number of times the coupon can be used
+    /// @param customerCount mapping of customer address to the number of times they have used the coupon
+    /// @param discountBp discount in basis points
+    /// @param discountAmt discount in amount
+    /// @param isActive if the coupon is active
     struct Coupon {
         uint256 minTxnAmt;
         uint256 minEthAmt;
@@ -61,6 +72,9 @@ contract MerchantContract {
         _;
     }
 
+    /// @notice purchase function for ETH
+    /// @param _address address to transfer to
+    /// @param amount amount to transfer
     function transferETH(address _address, uint256 amount) private returns (bool) {
         require(_address != address(0), "Zero addresses are not allowed.");
 
@@ -69,12 +83,16 @@ contract MerchantContract {
         return os;
     }
 
+    /// @notice function to get the product details
     function getProduct(uint256 id) public view returns (Product memory) {
         return products[id];
     }
 
     /// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~transaction functions~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     /// @notice ETH/native token specific transaction function
+    /// @param prodIds array of product ids
+    /// @param prodAmts array of product amounts
+    /// @param coupId coupon id
     function purchaseETH(uint256[] memory prodIds, uint256[] memory prodAmts, uint256 coupId) external payable {
         _validatePurchase(prodIds, prodAmts, coupId);
 
@@ -89,19 +107,19 @@ contract MerchantContract {
         _coupon.customerCount[address(msg.sender)] = suint(newCnt);
 
         uint256 gap = msg.value - finalPriceTk;
-        // console.log("gap: ", gap);
-        // console.log("msg.valu: ", msg.value);
-        // console.log("balance: ", address(this).balance);
         if (gap > 0) {
             require(transferETH(msg.sender, gap), "failed to refund");
         }
 
-        adjustStock(prodIds, prodAmts);
+        _adjustStock(prodIds, prodAmts);
 
         IDProtocol(core).updateUserEntry(address(this), saddress(msg.sender), suint(msg.value));
     }
 
-    /// @notice token transaction function
+    /// @notice purchase for ERC20 tokens
+    /// @param token address of the token
+    /// @param prodIds array of product ids
+    /// @param prodAmts array of product amounts
     function purchaseERC20(address token, uint256[] memory prodIds, uint256[] memory prodAmts, uint256 coupId)
         external
         payable
@@ -123,7 +141,7 @@ contract MerchantContract {
 
         IERC20(token).transferFrom(msg.sender, address(this), finalPriceTk);
 
-        adjustStock(prodIds, prodAmts);
+        _adjustStock(prodIds, prodAmts);
 
         suint purchaseAmount = suint(finalPriceTk * priceRatio);
         IDProtocol(core).updateUserEntry(business, saddress(msg.sender), purchaseAmount);
@@ -168,15 +186,6 @@ contract MerchantContract {
         );
     }
 
-    /// @notice helper function to adjust the stock of a prod
-    function adjustStock(uint256[] memory prodIds, uint256[] memory prodAmts) internal {
-        for (uint256 i = 0; i < prodIds.length; i++) {
-            uint256 id = prodIds[i];
-            uint256 amt = prodAmts[i];
-            products[id].stock -= amt;
-        }
-    }
-
     function _calculateTotalPrice(uint256[] memory prodIds, uint256[] memory prodAmts)
         internal
         view
@@ -202,6 +211,17 @@ contract MerchantContract {
     /// @notice function to adjust a products' stock
     function addStock(uint256 prodId, uint256 amt) public businessOnly {
         products[prodId].stock += amt;
+    }
+
+    /// @notice helper function to adjust the stock of a prod
+    /// @param prodIds array of product ids
+    /// @param prodAmts array of product amounts
+    function _adjustStock(uint256[] memory prodIds, uint256[] memory prodAmts) internal {
+        for (uint256 i = 0; i < prodIds.length; i++) {
+            uint256 id = prodIds[i];
+            uint256 amt = prodAmts[i];
+            products[id].stock -= amt;
+        }
     }
 
     /// @notice function for businesses to create coupons
@@ -237,15 +257,13 @@ contract MerchantContract {
         allowedTokens[token] = true;
     }
 
-    /// @notice function for business to move revenue to their wallet
+    /// @notice function for business to collect revenue to their wallet
+    /// @param _token address of the token
+    /// @param _to address to transfer to
     function collectRevenue(address _token, address _to) external payable businessOnly {
-        // require(allowedTokens[token], "Token is not approved.");
         if (_token == ETH_ADDRESS) {
-            // console.log("balance: ", address(this).balance);
             uint256 fee = address(this).balance / 100;
             uint256 remainder = address(this).balance - fee;
-            // console.log("fee: ", fee);
-            // console.log("remainder: ", remainder);
 
             require(transferETH(payable(_to), remainder), "failed to collect revenue");
             require(transferETH(core, fee), "failed to transfer fee to core");
