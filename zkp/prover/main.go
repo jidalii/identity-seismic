@@ -70,10 +70,10 @@ func (i IdentityUpdateReq) ToCircuit() circuit.IdentityCheckCircuit {
 
 func main() {
 	cs := groth16.NewCS(ecc.BN254)
-	utils.ReadFile(cs, "../trust-setup/01-cs.bin")
+	utils.ReadFile(cs, "../compiled_bin/01-cs.bin")
 
 	pk := groth16.NewProvingKey(ecc.BN254)
-	utils.ReadFile(pk, "../trust-setup/01-pk.bin")
+	utils.ReadFile(pk, "../compiled_bin/01-pk.bin")
 
 	req := IdentityUpdateReq{
 		Owner:           "221bA23331E5395F2018eDafc2E0E9fF2Acb1aDa",
