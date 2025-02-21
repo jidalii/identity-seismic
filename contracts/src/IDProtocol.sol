@@ -7,7 +7,7 @@ import "./Verifier.sol";
 import "./MerchantContract.sol";
 import "./MockOracle.sol";
 
-import "forge-std/console.sol";
+// import "forge-std/console.sol";
 
 
 contract IDProtocol {
@@ -220,8 +220,8 @@ contract IDProtocol {
         }
         _userData.totalPurchase += purchaseAmount;
         _userData.numPurchase += suint256(1);
-        console.log("updateUserEntry", uint(_userData.totalPurchase));
-        console.log("updateUserEntry", uint(_userData.numPurchase));
+        // console.log("updateUserEntry", uint(_userData.totalPurchase));
+        // console.log("updateUserEntry", uint(_userData.numPurchase));
     }
 
     function getUserEntry(address _merchant, saddress user) external view returns (UserDataPub memory) {
