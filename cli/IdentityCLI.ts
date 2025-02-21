@@ -1,9 +1,9 @@
-import { createPublicClient, createWalletClient, http } from 'seismic-viem';
+import { createShieldedPublicClient, createShieldedWalletClient, http } from 'seismic-viem';
 import { privateKeyToAccount } from 'viem/accounts';
-import { abi as IDProtocolABI } from './IDProtocol.json';
-import { abi as MerchantContractABI } from './MerchantContract.json';
-import { abi as MockOracleABI } from './MockOracle.json';
-import { abi as VerifierABI } from './Verifier.json';
+import { abi as IDProtocolABI } from '../contracts/build/IDProtocol.json';
+import { abi as MerchantContractABI } from '../contracts/build/MerchantContract.json';
+import { abi as MockOracleABI } from '../contracts/build/MockOracle.json';
+import { abi as VerifierABI } from '../contracts/build/Verifier.json';
 import { Command } from 'commander';
 import dotenv from 'dotenv';
 
@@ -11,11 +11,11 @@ dotenv.config();
 const program = new Command();
 
 // Initialize Ethereum clients
-const publicClient = createPublicClient({
+const publicClient = createShieldedPublicClient({
   transport: http(process.env.RPC_URL),
 });
 
-const walletClient = createWalletClient({
+const walletClient = createShieldedWalletClient({
   transport: http(process.env.RPC_URL),
   account: privateKeyToAccount(process.env.PRIVATE_KEY!),
 });
