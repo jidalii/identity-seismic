@@ -2,36 +2,51 @@
 pragma solidity ^0.8.13;
 
 import "./IERC20.sol";
-
 import "./Verifier.sol";
 import "./MerchantContract.sol";
 import "./MockOracle.sol";
 
-// import "forge-std/console.sol";
-
-
+/**
+ * @title IDProtocol
+ * @dev This contract handles user identity, merchant registration, and purchase tracking.
+ */
 contract IDProtocol {
     //*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*//
     //*                           USERS                            *//
     //*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*//
 
+    /**
+     * @dev Stores user purchase data.
+     * @param totalPurchase Total amount spent by the user.
+     * @param numPurchase Number of purchases made by the user.
+     * @param isFirstTime Indicates whether the user has made previous purchases.
+     */
     struct UserData {
         suint256 totalPurchase;
         suint256 numPurchase;
         sbool isFirstTime; // false if first time, true if not
     }
 
+    /**
+     * @dev Public version of UserData with standard types.
+     */
     struct UserDataPub {
         uint256 totalPurchase;
         uint256 numPurchase;
         bool isFirstTime; // false if first time, true if not
     }
 
+    /**
+     * @dev Maps users to their purchase data.
+     */
     struct UserEntry {
         saddress[] users;
         mapping(saddress => UserData) data;
     }
 
+    /**
+     * @dev Struct for updating customer data.
+     */
     struct CustomerDataUpdateReq {
         saddress user;
         suint256 purchaseAmount;
@@ -41,16 +56,21 @@ contract IDProtocol {
     //*                          MERCHANTs                         *//
     //*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*//
 
-    /// @dev Merchant data
-    /// @param merchant address of the merchant's smart contract
-    /// @param owner address of the merchant's owner
-    /// @param name name of the merchant
+    /**
+     * @dev Contains merchant information.
+     * @param merchant The address of the merchant's smart contract.
+     * @param owner The owner of the merchant.
+     * @param name The name of the merchant.
+     */
     struct MerchantData {
         address merchant;
         address owner;
         string name;
     }
 
+    /**
+     * @dev Request structure for merchant registration.
+     */
     struct MerchantRegistReq {
         address owner;
         string name;
@@ -60,11 +80,17 @@ contract IDProtocol {
     //*                          IDENTITY                          *//
     //*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*//
 
+    /**
+     * @dev Stores both on-chain and off-chain identity data.
+     */
     struct Identity {
         OffchainIdentity offchain;
         OnchainIdentity onchain;
     }
 
+    /**
+     * @dev Off-chain identity attributes.
+     */
     struct OffchainIdentity {
         sbool isGithub;
         suint githubStar;
@@ -72,11 +98,17 @@ contract IDProtocol {
         suint twitterFollower;
     }
 
+    /**
+     * @dev On-chain identity attributes.
+     */
     struct OnchainIdentity {
         suint totalStaked;
         suint txnFrequency;
     }
 
+    /**
+     * @dev Query requirements for filtering identities.
+     */
     struct QueryReq {
         suint minGithubStar;
         suint minTwitterFollower;
@@ -85,14 +117,36 @@ contract IDProtocol {
         suint minTxnFrequency;
     }
 
+    /**
+     * @dev Emitted when the protocol is deployed.
+     * @param owner The address of the contract deployer.
+     * @param verif The address of the Verifier contract.
+     * @param oracle The address of the MockOracle contract.
+     */
     event ProtocolDeployed(address owner, address verif, address oracle);
+
+    /**
+     * @dev Emitted when a new merchant is registered.
+     * @param merchant The merchant contract address.
+     * @param owner The owner of the merchant.
+     * @param name The name of the merchant.
+     */
     event MerchantRegistered(address merchant, address owner, string name);
+
+    /**
+     * @dev Emitted when funds are withdrawn from the contract.
+     * @param token The token address being withdrawn.
+     * @param to The recipient address.
+     * @param amount The amount withdrawn.
+     */
     event VaultWithdrawn(address token, address to, uint256 amount);
 
+    //*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*//
+    //*                         STATE VARS                         *//
+    //*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*//
     address public constant ETH_ADDRESS = address(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE);
 
     address public owner;
-
     Verifier public verif;
     MockOracle public oracle;
 
@@ -106,7 +160,10 @@ contract IDProtocol {
 
     mapping(address => Identity) onchainId;
     saddress[] onchainIdAddresses;
-
+    
+    /**
+     * @dev Initializes the IDProtocol contract.
+     */
     constructor() {
         owner = msg.sender;
         verif = new Verifier();
@@ -114,6 +171,9 @@ contract IDProtocol {
         emit ProtocolDeployed(owner, address(verif), address(oracle));
     }
 
+    /**
+     * @dev Ensures only the owner can call a function.
+     */
     modifier onlyOwner() {
         require(msg.sender == owner, "Only the owner can call this.");
         _;
@@ -125,6 +185,11 @@ contract IDProtocol {
     //*                         ADMIN-ONLY                         *//
     //*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*//
 
+    /**
+     * @dev Withdraws ETH or ERC20 tokens from the contract.
+     * @param _token The token address (use ETH_ADDRESS for ETH).
+     * @param _to The recipient address.
+     */
     function withdraw(address _token, address _to) external onlyOwner {
         if (_token == ETH_ADDRESS) {
             require(transferETH(_to, address(this).balance), "failed to withdraw ETH");
@@ -134,6 +199,12 @@ contract IDProtocol {
         emit VaultWithdrawn(_token, _to, address(this).balance);
     }
 
+    /**
+     * @dev Transfers ETH to a specified address.
+     * @param _address The recipient address.
+     * @param amount The amount to transfer.
+     * @return Whether the transfer was successful.
+     */
     function transferETH(address _address, uint256 amount) private returns (bool) {
         require(_address != address(0), "Zero addresses are not allowed.");
 
@@ -146,6 +217,11 @@ contract IDProtocol {
     //*                      IDENTITY-RELATED                      *//
     //*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*//
 
+    /**
+     * @dev Retrieves a user's score based on their identity.
+     * @param _user The user's address.
+     * @return The calculated score.
+     */
     function getScore(address _user) public view returns (uint256) {
         OffchainIdentity memory _offchain = onchainId[_user].offchain;
         OnchainIdentity memory _onchain = onchainId[_user].onchain;
@@ -207,6 +283,12 @@ contract IDProtocol {
         return score;
     }
 
+    /**
+     * @dev Updates a user's identity score.
+     * @param _proof A zero-knowledge proof.
+     * @param _pubWitness The public witness data.
+     * @param newVals The new offchain identity values.
+     */
     function updateScore(uint256[8] calldata _proof, uint256[1] calldata _pubWitness, OffchainIdentity calldata newVals)
         public
         view
@@ -215,6 +297,10 @@ contract IDProtocol {
         Identity memory _userIdentity = onchainId[msg.sender];
     }
 
+    /**
+     * @dev Returns the identity details of the caller.
+     * @return The identity data.
+     */
     function getIdentity() public view returns (Identity memory) {
         return onchainId[msg.sender];
     }
@@ -257,8 +343,13 @@ contract IDProtocol {
     //*                      MERCHANT-RELATED                      *//
     //*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*//
 
+    /**
+     * @dev Registers a new merchant.
+     * @param _req The merchant registration request.
+     * @return The address of the new merchant contract.
+     */
     function register(MerchantRegistReq calldata _req) external returns (address) {
-        _validateRegiester(_req);
+        _validateRegister(_req);
 
         MerchantContract newMerchant = new MerchantContract(_req.owner, _req.name, address(oracle));
         merchants.push(address(newMerchant));
@@ -307,7 +398,11 @@ contract IDProtocol {
         return true;
     }
 
-    function _validateRegiester(MerchantRegistReq calldata _req) internal pure {
+    /**
+     * @dev Ensures that a merchant registration request is valid.
+     * @param _req The merchant registration request.
+     */
+    function _validateRegister(MerchantRegistReq calldata _req) internal pure {
         require(_req.owner != address(0), "Zero address");
         require(bytes(_req.name).length > 0, "Empty name");
     }
