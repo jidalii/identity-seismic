@@ -3,21 +3,26 @@ pragma solidity ^0.8.13;
 
 import "./IDProtocol.sol";
 import "./IERC20.sol";
+import {MockOracle} from "./MockOracle.sol";
 
 contract MerchantContract {
     /// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~merchant data~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     /// @notice vars about the contract details
-    address payable business;
-    string name;
-    address payable core;
+    address payable public business;
+    string public name;
+    address payable public core;
+    address public oracle;
     address public ETH_ADDRESS = address(0x0);
     mapping(address => bool) allowedTokens;
 
-    constructor(address businessAddr, string memory businessName) {
+    constructor(address businessAddr, string memory businessName, address _oracle) {
         business = payable(businessAddr);
         name = businessName;
         core = payable(msg.sender);
         allowedTokens[ETH_ADDRESS] = true;
+        oracle = _oracle;
+
+        newCoupId = 1;
     }
 
     /// @notice struct detailing the business products
@@ -33,6 +38,8 @@ contract MerchantContract {
         bool firstTimeOnly;
         uint256 usage;
         mapping(saddress => uint256) customerCount;
+        uint256 discountBp;
+        uint256 discountAmt;
         bool isActive;
     }
 
@@ -42,6 +49,10 @@ contract MerchantContract {
     uint256 newProdId;
     uint256 newCoupId;
 
+
+    error InvalidCouponCreation();
+    error InvalidCouponUsage();
+
     /// @notice modifier to determine if only the business can call the function
     modifier businessOnly() {
         require(msg.sender == business, "Only the business can call this.");
@@ -50,48 +61,87 @@ contract MerchantContract {
 
 /// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~transaction functions~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     /// @notice ETH/native token specific transaction function
-    function purchaseETH(uint256[] memory txnProds, uint256[] memory txnAmts, uint256 coupId) external payable {
-        require(txnProds.length == txnAmts.length, "Incorrect transaction details.");
-        uint256 totalPrice;
-        for (uint256 i = 0; i < txnProds.length; i++) {
-            totalPrice += (products[txnProds[i]].price * txnAmts[i]);
-        }
+    function purchaseETH(uint256[] memory prodIds, uint256[] memory prodAmts, uint256 coupId) external payable {
+        _validatePurchase(prodIds, prodAmts, coupId);
 
+        uint256 totalPrice = _calculateTotalPrice(prodIds, prodAmts);
         require(msg.value == totalPrice);
 
-        for (uint256 i = 0; i < txnProds.length; i++) {
-            uint256 id = txnProds[i];
-            uint256 amt = txnAmts[i];
-            adjustStock(id, amt);
-        }
+        adjustStock(prodIds, prodAmts);
 
         IDProtocol(core).updateUserEntry(business, saddress(msg.sender), suint(msg.value));
     }
 
     /// @notice token transaction function
-    function purchaseERC20(address token, uint256[] memory txnProds, uint256[] memory txnAmts, uint256 coupId) external payable {
-        require(txnProds.length == txnAmts.length, "Incorrect transaction details.");
-        uint256 totalPrice;
-        for (uint256 i = 0; i < txnProds.length; i++) {
-            totalPrice += (products[txnProds[i]].price * txnAmts[i]);
-        }
+    function purchaseERC20(address token, uint256[] memory prodIds, uint256[] memory prodAmts, uint256 coupId) external payable {
+        _validatePurchase(prodIds, prodAmts, coupId);
+        require(allowedTokens[token], "Token is not approved");
 
-        IERC20(token).transferFrom(msg.sender, address(this), totalPrice);
 
-        for (uint256 i = 0; i < txnProds.length; i++) {
-            uint256 id = txnProds[i];
-            uint256 amt = txnAmts[i];
-            adjustStock(id, amt);
-        }
+        uint256 totalPriceTk = _calculateTotalPrice(prodIds, prodAmts);
+        Coupon storage _coupon = coupons[coupId];
 
-        suint purchaseAmount; // todo: fix this to call price oracle
+        uint256 finalPriceTk = _calculateDiscountedPrice(_coupon, totalPriceTk);
+
+        // update coupon state
+        _coupon.customerCount[saddress(msg.sender)]++;
+
+        IERC20(token).transferFrom(msg.sender, address(this), finalPriceTk);
+
+        adjustStock(prodIds, prodAmts);
+        
+
+        suint purchaseAmount = suint(finalPriceTk * MockOracle(oracle).calcRatio(token));
         IDProtocol(core).updateUserEntry(business, saddress(msg.sender), purchaseAmount);
     }
 
-    /// @notice helper function to adjust the stock of a prod
-    function adjustStock(uint256 prodId, uint256 amount) internal {
-        products[prodId].stock -= amount;
+    function _calculateDiscountedPrice(Coupon storage _coupon, uint256 totalPriceTk) internal view returns(uint256) {
+        // check if the coupon is valid
+        bool isSuccess = IDProtocol(core).checkValidCouponApply(msg.sender, _coupon.minTxnAmt, _coupon.minEthAmt, _coupon.firstTimeOnly);
+        if (!isSuccess) {
+            revert InvalidCouponUsage();
+        }
+
+        // cal discounted price
+        uint256 finalPriceTk;
+        if(_coupon.discountAmt > 0) {
+            finalPriceTk -= _coupon.discountAmt;
+        } else {
+            finalPriceTk -= totalPriceTk * _coupon.discountBp / 10000;
+        }
+        return finalPriceTk;
     }
+
+    function _validatePurchase(uint256[] memory prodIds, uint256[] memory prodAmts, uint256 coupId) internal view {
+        require(prodIds.length == prodAmts.length, "Incorrect transaction details");
+        for (uint256 i = 0; i < prodIds.length; i++) {
+            uint256 id = prodIds[i];
+            uint256 amt = prodAmts[i];
+            require(products[id].stock >= amt, "Insufficient stock");
+        }
+        
+        require(coupons[coupId].isActive, "Coupon is not active");
+        require(coupons[coupId].usage > coupons[coupId].customerCount[saddress(msg.sender)], "Coupon usage limit reached");
+    }
+
+    /// @notice helper function to adjust the stock of a prod
+    function adjustStock(uint256[] memory prodIds, uint256[] memory prodAmts) internal {
+        for (uint256 i = 0; i < prodIds.length; i++) {
+            uint256 id = prodIds[i];
+            uint256 amt = prodAmts[i];
+            products[id].stock -= amt;
+        }
+    }
+
+    function _calculateTotalPrice(uint256[] memory prodIds, uint256[] memory prodAmts) internal view returns (uint256) {
+        uint256 totalPrice;
+        for (uint256 i = 0; i < prodIds.length; i++) {
+            totalPrice += (products[prodIds[i]].price * prodAmts[i]);
+        }
+        return totalPrice;
+    }
+
+
 /// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~merchant functions~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     /// @notice function for businesses to create products
     function createProduct(uint256 prc, uint256 stck) public businessOnly {
@@ -107,13 +157,18 @@ contract MerchantContract {
     }
 
     /// @notice function for businesses to create coupons
-    function createCoupon(uint256 txnAmt, uint256 ethAmt, bool firstTime, uint256 usageNum) public businessOnly {
+    function createCoupon(uint256 _txnAmt, uint256 _ethAmt, bool _firstTime, uint256 _usageNum, uint256 _discountBp, uint256 _discountAmt) public businessOnly {
+        if (_discountAmt == 0 && _discountBp == 0) {
+            revert InvalidCouponCreation();
+        }
         Coupon storage newCoupon = coupons[newCoupId];
-        newCoupon.minTxnAmt = txnAmt;
-        newCoupon.minEthAmt = ethAmt;
-        newCoupon.firstTimeOnly = firstTime;
-        newCoupon.usage = usageNum;
+        newCoupon.minTxnAmt = _txnAmt;
+        newCoupon.minEthAmt = _ethAmt;
+        newCoupon.firstTimeOnly = _firstTime;
+        newCoupon.usage = _usageNum;
         newCoupon.isActive = true;
+        newCoupon.discountBp = _discountBp;
+        newCoupon.discountAmt = _discountAmt;
         newCoupId++;
     }
 
