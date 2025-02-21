@@ -4,6 +4,12 @@
 
 ## Commands
 
+- Install dependencies:
+  
+    ```shell
+    sforge install OpenZeppelin/openzeppelin-contracts  --no-commit 
+    ```
+
 - Compile smart contracts to ABIs:
 
     ```shell
